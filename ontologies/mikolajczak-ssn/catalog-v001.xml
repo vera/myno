@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<catalog prefer="public" xmlns="urn:oasis:names:tc:entity:xmlns:xml:catalog">
+    <uri id="Imports Wizard Entry" name="http://www.ontology-of-units-of-measure.org/resource/om-2/" uri="SSN/om-2.ttl"/>
+    <uri id="User Entered Import Resolution" name="http://www.onem2m.org/ontology/Base_Ontology/base_ontology-v0_9_0" uri="file:/c:/Users/sahlmann/Documents/Dissertation/Code-SVN/Lindemann/trunk/ontologies/oneM2M_Base_Ontology-V_3_2_0.owl"/>
+    <group id="Folder Repository, directory=, recursive=true, Auto-Update=true, version=2" prefer="public" xml:base=""/>
+</catalog>

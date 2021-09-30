@@ -1,0 +1,551 @@
+{
+  "@context": {
+    "owl": "http://www.w3.org/2002/07/owl#",
+    "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+    "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
+    "xsd": "http://www.w3.org/2001/XMLSchema#",
+    "myno": "https://www.cs.uni-potsdam.de/bs/research/myno/sensordata#",
+    "sosa": "http://www.w3.org/ns/sosa/",
+    "om-2": "http://www.ontology-of-units-of-measure.org/resource/om-2/",
+    "onem2m": "http://www.onem2m.org/ontology/Base_Ontology/base_ontology#",
+    "ynetmqtt": "http://yang-netconf-mqtt#"
+  },
+  "@graph": [
+    {
+      "@id": "onem2m:Command",
+      "@type": "owl:Class"
+    },
+    {
+      "@id": "onem2m:ControllingFunctionality",
+      "@type": "owl:Class"
+    },
+    {
+      "@id": "onem2m:Device",
+      "@type": "owl:Class"
+    },
+    {
+      "@id": "onem2m:MeasuringFunctionality",
+      "@type": "owl:Class"
+    },
+    {
+      "@id": "onem2m:Operation",
+      "@type": "owl:Class"
+    },
+    {
+      "@id": "onem2m:OperationInput",
+      "@type": "owl:Class"
+    },
+    {
+      "@id": "onem2m:OperationOutput",
+      "@type": "owl:Class"
+    },
+    {
+      "@id": "onem2m:OperationState",
+      "@type": "owl:Class"
+    },
+    {
+      "@id": "onem2m:OutputDataPoint",
+      "@type": "owl:Class"
+    },
+    {
+      "@id": "onem2m:Service",
+      "@type": "owl:Class"
+    },
+    {
+      "@id": "onem2m:ThingProperty",
+      "@type": "owl:Class"
+    },
+    {
+      "@id": "onem2m:exposesCommand",
+      "@type": "owl:ObjectProperty"
+    },
+    {
+      "@id": "onem2m:exposesFunctionality",
+      "@type": "owl:AnnotationProperty"
+    },
+    {
+      "@id": "onem2m:hasCommand",
+      "@type": "owl:ObjectProperty"
+    },
+    {
+      "@id": "onem2m:hasDataRestriction_pattern",
+      "@type": "owl:DatatypeProperty"
+    },
+    {
+      "@id": "onem2m:hasFunctionality",
+      "@type": "owl:AnnotationProperty"
+    },
+    {
+      "@id": "onem2m:hasInput",
+      "@type": "owl:ObjectProperty",
+      "rdfs:range": {
+        "@id": "onem2m:ThingProperty"
+      }
+    },
+    {
+      "@id": "onem2m:hasOperation",
+      "@type": "owl:ObjectProperty"
+    },
+    {
+      "@id": "onem2m:hasOperationState",
+      "@type": "owl:ObjectProperty"
+    },
+    {
+      "@id": "onem2m:hasOutput",
+      "@type": "owl:ObjectProperty"
+    },
+    {
+      "@id": "onem2m:hasOutputDataPoint",
+      "@type": "owl:ObjectProperty"
+    },
+    {
+      "@id": "onem2m:hasService",
+      "@type": "owl:ObjectProperty"
+    },
+    {
+      "@id": "onem2m:hasSubService",
+      "@type": "owl:ObjectProperty"
+    },
+    {
+      "@id": "onem2m:hasThingProperty",
+      "@type": "owl:ObjectProperty"
+    },
+    {
+      "@id": "onem2m:hasValue",
+      "@type": "owl:DatatypeProperty"
+    },
+    {
+      "@id": "http://yang-netconf-mqtt",
+      "@type": "owl:Ontology",
+      "owl:imports": {
+        "@id": "http://www.onem2m.org/ontology/Base_Ontology/base_ontology-v0_9_0"
+      }
+    },
+    {
+      "@id": "ynetmqtt:YangDescription",
+      "@type": "owl:Class",
+      "rdfs:subClassOf": {
+        "@id": "onem2m:ThingProperty"
+      }
+    },
+    {
+      "@id": "ynetmqtt:cmdLed_1Color",
+      "@type": [
+        "owl:NamedIndividual",
+        "onem2m:Command"
+      ],
+      "onem2m:hasInput": [
+        {
+          "@id": "ynetmqtt:colorInput"
+        },
+        {
+          "@id": "ynetmqtt:uuidInput"
+        }
+      ]
+    },
+    {
+      "@id": "ynetmqtt:cmdLed_1Off",
+      "@type": [
+        "owl:NamedIndividual",
+        "onem2m:Command"
+      ],
+      "onem2m:hasInput": {
+        "@id": "ynetmqtt:uuidInput"
+      }
+    },
+    {
+      "@id": "ynetmqtt:cmdLed_1On",
+      "@type": [
+        "owl:NamedIndividual",
+        "onem2m:Command"
+      ],
+      "onem2m:hasInput": {
+        "@id": "ynetmqtt:uuidInput"
+      }
+    },
+    {
+      "@id": "ynetmqtt:colorInput",
+      "@type": [
+        "owl:NamedIndividual",
+        "onem2m:OperationInput"
+      ],
+      "onem2m:hasDataRestriction_pattern": [
+        "all",
+        "green",
+        "red"
+      ],
+      "onem2m:hasThingProperty": {
+        "@id": "ynetmqtt:colorYangDesc"
+      }
+    },
+    {
+      "@id": "ynetmqtt:colorYangDesc",
+      "@type": [
+        "owl:NamedIndividual",
+        "ynetmqtt:YangDescription"
+      ],
+      "onem2m:hasValue": "color paramter for led_1"
+    },
+    {
+      "@id": "ynetmqtt:deviceCategory",
+      "@type": [
+        "owl:NamedIndividual",
+        "onem2m:ThingProperty"
+      ],
+      "onem2m:hasValue": "Board_2"
+    },
+    {
+      "@id": "ynetmqtt:deviceDesc",
+      "@type": [
+        "owl:NamedIndividual",
+        "ynetmqtt:YangDescription"
+      ],
+      "onem2m:hasValue": "MQTT-Device identified by UUID"
+    },
+    {
+      "@id": "ynetmqtt:deviceUuid",
+      "@type": [
+        "owl:NamedIndividual",
+        "onem2m:ThingProperty"
+      ],
+      "onem2m:hasValue": "%s"
+    },
+    {
+      "@id": "ynetmqtt:funcDescBrightness",
+      "@type": [
+        "owl:NamedIndividual",
+        "ynetmqtt:YangDescription"
+      ],
+      "onem2m:hasValue": "Get brightness from sensor"
+    },
+    {
+      "@id": "ynetmqtt:funcDescLed_1Color",
+      "@type": [
+        "owl:NamedIndividual",
+        "ynetmqtt:YangDescription"
+      ],
+      "onem2m:hasValue": "Set Color of led_1"
+    },
+    {
+      "@id": "ynetmqtt:funcDescLed_1Off",
+      "@type": [
+        "owl:NamedIndividual",
+        "ynetmqtt:YangDescription"
+      ],
+      "onem2m:hasValue": "Turn led_1 off, i.e. all sub-leds"
+    },
+    {
+      "@id": "ynetmqtt:funcDescLed_1On",
+      "@type": [
+        "owl:NamedIndividual",
+        "ynetmqtt:YangDescription"
+      ],
+      "onem2m:hasValue": "Turn led_1 on, i.e. all sub-leds"
+    },
+    {
+      "@id": "ynetmqtt:funcDescMotion",
+      "@type": [
+        "owl:NamedIndividual",
+        "ynetmqtt:YangDescription"
+      ],
+      "onem2m:hasValue": "Get motion detection from sensor"
+    },
+    {
+      "@id": "ynetmqtt:funcDetectMotion",
+      "@type": [
+        "owl:NamedIndividual",
+        "onem2m:MeasuringFunctionality"
+      ],
+      "onem2m:hasThingProperty": {
+        "@id": "ynetmqtt:funcDescMotion"
+      }
+    },
+    {
+      "@id": "ynetmqtt:funcGetBrightness",
+      "@type": [
+        "owl:NamedIndividual",
+        "onem2m:MeasuringFunctionality"
+      ],
+      "onem2m:hasThingProperty": {
+        "@id": "ynetmqtt:funcDescBrightness"
+      }
+    },
+    {
+      "@id": "ynetmqtt:funcLed_1Color",
+      "@type": [
+        "owl:NamedIndividual",
+        "onem2m:ControllingFunctionality"
+      ],
+      "onem2m:hasCommand": {
+        "@id": "ynetmqtt:cmdLed_1Color"
+      },
+      "onem2m:hasThingProperty": {
+        "@id": "ynetmqtt:funcDescLed_1Color"
+      }
+    },
+    {
+      "@id": "ynetmqtt:funcLed_1Off",
+      "@type": [
+        "owl:NamedIndividual",
+        "onem2m:ControllingFunctionality"
+      ],
+      "onem2m:hasCommand": {
+        "@id": "ynetmqtt:cmdLed_1Off"
+      },
+      "onem2m:hasThingProperty": {
+        "@id": "ynetmqtt:funcDescLed_1Off"
+      }
+    },
+    {
+      "@id": "ynetmqtt:funcLed_1On",
+      "@type": [
+        "owl:NamedIndividual",
+        "onem2m:ControllingFunctionality"
+      ],
+      "onem2m:hasCommand": {
+        "@id": "ynetmqtt:cmdLed_1On"
+      },
+      "onem2m:hasThingProperty": {
+        "@id": "ynetmqtt:funcDescLed_1On"
+      }
+    },
+    {
+      "@id": "ynetmqtt:mqttMethod",
+      "@type": "owl:DatatypeProperty"
+    },
+    {
+      "@id": "ynetmqtt:mqttTopic",
+      "@type": "owl:DatatypeProperty"
+    },
+    {
+      "@id": "ynetmqtt:myDevice",
+      "@type": [
+        "owl:NamedIndividual",
+        "onem2m:Device"
+      ],
+      "onem2m:hasFunctionality": [
+        {
+          "@id": "ynetmqtt:funcDetectMotion"
+        },
+        {
+          "@id": "ynetmqtt:funcGetBrightness"
+        },
+        {
+          "@id": "ynetmqtt:funcLed_1Color"
+        },
+        {
+          "@id": "ynetmqtt:funcLed_1Off"
+        },
+        {
+          "@id": "ynetmqtt:funcLed_1On"
+        }
+      ],
+      "onem2m:hasService": {
+        "@id": "ynetmqtt:servNetconf"
+      },
+      "onem2m:hasThingProperty": [
+        {
+          "@id": "ynetmqtt:deviceCategory"
+        },
+        {
+          "@id": "ynetmqtt:deviceDesc"
+        },
+        {
+          "@id": "ynetmqtt:deviceUuid"
+        }
+      ]
+    },
+    {
+      "@id": "ynetmqtt:opDescState",
+      "@type": [
+        "owl:NamedIndividual",
+        "ynetmqtt:YangDescription"
+      ],
+      "onem2m:hasDataRestriction_pattern": [
+        "error",
+        "nothing to do",
+        "successful"
+      ]
+    },
+    {
+      "@id": "ynetmqtt:opMqttLed_1Color",
+      "@type": [
+        "owl:NamedIndividual",
+        "onem2m:Operation"
+      ],
+      "onem2m:exposesCommand": {
+        "@id": "ynetmqtt:cmdLed_1Color"
+      },
+      "onem2m:hasInput": [
+        {
+          "@id": "ynetmqtt:colorInput"
+        },
+        {
+          "@id": "ynetmqtt:uuidInput"
+        }
+      ],
+      "onem2m:hasOperationState": {
+        "@id": "ynetmqtt:opState"
+      },
+      "ynetmqtt:mqttMethod": "color",
+      "ynetmqtt:mqttTopic": "actuator/led/led_1"
+    },
+    {
+      "@id": "ynetmqtt:opMqttLed_1Off",
+      "@type": [
+        "owl:NamedIndividual",
+        "onem2m:Operation"
+      ],
+      "onem2m:exposesCommand": {
+        "@id": "ynetmqtt:cmdLed_1Off"
+      },
+      "onem2m:hasInput": {
+        "@id": "ynetmqtt:uuidInput"
+      },
+      "onem2m:hasOperationState": {
+        "@id": "ynetmqtt:opState"
+      },
+      "ynetmqtt:mqttMethod": "OFF",
+      "ynetmqtt:mqttTopic": "actuator/led/led_1"
+    },
+    {
+      "@id": "ynetmqtt:opMqttLed_1On",
+      "@type": [
+        "owl:NamedIndividual",
+        "onem2m:Operation"
+      ],
+      "onem2m:exposesCommand": {
+        "@id": "ynetmqtt:cmdLed_1On"
+      },
+      "onem2m:hasInput": {
+        "@id": "ynetmqtt:uuidInput"
+      },
+      "onem2m:hasOperationState": {
+        "@id": "ynetmqtt:opState"
+      },
+      "ynetmqtt:mqttMethod": "ON",
+      "ynetmqtt:mqttTopic": "actuator/led/led_1"
+    },
+    {
+      "@id": "ynetmqtt:opState",
+      "@type": [
+        "owl:NamedIndividual",
+        "onem2m:OperationState"
+      ],
+      "onem2m:hasDataRestriction_pattern": [
+        "ERROR",
+        "NOOP",
+        "OK"
+      ],
+      "onem2m:hasThingProperty": {
+        "@id": "ynetmqtt:opDescState"
+      }
+    },
+    {
+      "@id": "ynetmqtt:outDpBrightness",
+      "@type": [
+        "owl:NamedIndividual",
+        "onem2m:OutputDataPoint"
+      ],
+      "ynetmqtt:mqttTopic": "sensor/brightness/brightness_1/%s"
+    },
+    {
+      "@id": "ynetmqtt:outDpMotion",
+      "@type": [
+        "owl:NamedIndividual",
+        "onem2m:OutputDataPoint"
+      ],
+      "ynetmqtt:mqttTopic": "sensor/motion/motion_1/%s"
+    },
+    {
+      "@id": "ynetmqtt:servBrightness",
+      "@type": [
+        "owl:NamedIndividual",
+        "onem2m:Service"
+      ],
+      "onem2m:exposesFunctionality": {
+        "@id": "ynetmqtt:funcGetBrightness"
+      },
+      "onem2m:hasOutputDataPoint": {
+        "@id": "ynetmqtt:outDpBrightness"
+      }
+    },
+    {
+      "@id": "ynetmqtt:servMotion",
+      "@type": [
+        "owl:NamedIndividual",
+        "onem2m:Service"
+      ],
+      "onem2m:exposesFunctionality": {
+        "@id": "ynetmqtt:funcDetectMotion"
+      },
+      "onem2m:hasOutputDataPoint": {
+        "@id": "ynetmqtt:outDpMotion"
+      }
+    },
+    {
+      "@id": "ynetmqtt:servNetconf",
+      "@type": [
+        "owl:NamedIndividual",
+        "onem2m:Service"
+      ],
+      "onem2m:exposesFunctionality": [
+        {
+          "@id": "ynetmqtt:funcDetectMotion"
+        },
+        {
+          "@id": "ynetmqtt:funcGetBrightness"
+        },
+        {
+          "@id": "ynetmqtt:funcLed_1Color"
+        },
+        {
+          "@id": "ynetmqtt:funcLed_1Off"
+        },
+        {
+          "@id": "ynetmqtt:funcLed_1On"
+        }
+      ],
+      "onem2m:hasOperation": [
+        {
+          "@id": "ynetmqtt:opMqttLed_1Color"
+        },
+        {
+          "@id": "ynetmqtt:opMqttLed_1Off"
+        },
+        {
+          "@id": "ynetmqtt:opMqttLed_1On"
+        }
+      ],
+      "onem2m:hasSubService": [
+        {
+          "@id": "ynetmqtt:servBrightness"
+        },
+        {
+          "@id": "ynetmqtt:servMotion"
+        }
+      ]
+    },
+    {
+      "@id": "ynetmqtt:uuidInput",
+      "@type": [
+        "owl:NamedIndividual",
+        "onem2m:OperationInput"
+      ],
+      "onem2m:hasInput": {
+        "@id": "ynetmqtt:deviceUuid"
+      },
+      "onem2m:hasThingProperty": {
+        "@id": "ynetmqtt:uuidYangDesc"
+      }
+    },
+    {
+      "@id": "ynetmqtt:uuidYangDesc",
+      "@type": [
+        "owl:NamedIndividual",
+        "ynetmqtt:YangDescription"
+      ],
+      "onem2m:hasValue": "Target UUID for request"
+    }
+  ]
+}

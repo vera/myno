@@ -1,0 +1,97 @@
+[ {
+  "@id" : "http://www.ontology-of-units-of-measure.org/resource/om-2/Measure",
+  "@type" : [ "http://www.w3.org/2002/07/owl#Class" ]
+}, {
+  "@id" : "http://www.ontology-of-units-of-measure.org/resource/om-2/Temperature",
+  "@type" : [ "http://www.w3.org/2002/07/owl#NamedIndividual", "http://www.w3.org/ns/sosa/ObservableProperty" ],
+  "http://www.w3.org/ns/sosa/isObservedBy" : [ {
+    "@id" : "https://www.cs.uni-potsdam.de/bs/research/myno/sensordata#mytempsensor"
+  } ]
+}, {
+  "@id" : "http://www.ontology-of-units-of-measure.org/resource/om-2/hasUnit",
+  "@type" : [ "http://www.w3.org/2002/07/owl#AnnotationProperty" ]
+}, {
+  "@id" : "https://www.cs.uni-potsdam.de/bs/research/myno/sensordata",
+  "@type" : [ "http://www.w3.org/2002/07/owl#Ontology" ],
+  "http://www.w3.org/2002/07/owl#imports" : [ {
+    "@id" : "http://www.ontology-of-units-of-measure.org/resource/om-2/"
+  }, {
+    "@id" : "http://www.w3.org/ns/sosa/"
+  }, {
+    "@id" : "http://www.w3.org/ns/ssn/"
+  } ]
+}, {
+  "@id" : "https://www.cs.uni-potsdam.de/bs/research/myno/sensordata#%name",
+  "@type" : [ "http://www.w3.org/2002/07/owl#NamedIndividual", "http://www.w3.org/ns/sosa/Observation" ],
+  "http://www.w3.org/ns/sosa/hasFeatureOfInterest" : [ {
+    "@id" : "https://www.cs.uni-potsdam.de/bs/research/myno/sensordata#room21"
+  } ],
+  "http://www.w3.org/ns/sosa/hasResult" : [ {
+    "@id" : "https://www.cs.uni-potsdam.de/bs/research/myno/sensordata#%result"
+  } ],
+  "http://www.w3.org/ns/sosa/hasSimpleResult" : [ {
+    "@type" : "http://www.w3.org/2001/XMLSchema#float",
+    "@value" : "-0.1"
+  } ],
+  "http://www.w3.org/ns/sosa/madeBySensor" : [ {
+    "@id" : "https://www.cs.uni-potsdam.de/bs/research/myno/sensordata#mytempsensor"
+  } ],
+  "http://www.w3.org/ns/sosa/observedProperty" : [ {
+    "@id" : "http://www.ontology-of-units-of-measure.org/resource/om-2/Temperature"
+  } ],
+  "http://www.w3.org/ns/sosa/resultTime" : [ {
+    "@type" : "http://www.w3.org/2001/XMLSchema#dateTime",
+    "@value" : "0000-01-01T00:00:00+00:00"
+  } ],
+  "http://www.w3.org/ns/sosa/usedProcedure" : [ {
+    "@id" : "https://www.cs.uni-potsdam.de/bs/research/myno/sensordata#myprocedure"
+  } ]
+}, {
+  "@id" : "https://www.cs.uni-potsdam.de/bs/research/myno/sensordata#%result",
+  "@type" : [ "http://www.w3.org/2002/07/owl#NamedIndividual", "http://www.ontology-of-units-of-measure.org/resource/om-2/Measure", "http://www.w3.org/ns/sosa/Result" ],
+  "http://www.ontology-of-units-of-measure.org/resource/om-2/hasUnit" : [ {
+    "@id" : "http://www.ontology-of-units-of-measure.org/resource/om-2/CelsiusScale"
+  } ],
+  "http://www.w3.org/ns/sosa/isResultOf" : [ {
+    "@id" : "https://www.cs.uni-potsdam.de/bs/research/myno/sensordata#%name"
+  } ]
+}, {
+  "@id" : "https://www.cs.uni-potsdam.de/bs/research/myno/sensordata#ESP32_%p",
+  "@type" : [ "http://www.w3.org/2002/07/owl#NamedIndividual", "http://www.w3.org/ns/sosa/Platform" ],
+  "http://www.w3.org/ns/sosa/hosts" : [ {
+    "@id" : "https://www.cs.uni-potsdam.de/bs/research/myno/sensordata#mytempsensor"
+  } ]
+}, {
+  "@id" : "https://www.cs.uni-potsdam.de/bs/research/myno/sensordata#myprocedure",
+  "@type" : [ "http://www.w3.org/2002/07/owl#NamedIndividual", "http://www.w3.org/ns/sosa/Procedure" ],
+  "http://www.w3.org/ns/sosa/madeBySensor" : [ {
+    "@id" : "https://www.cs.uni-potsdam.de/bs/research/myno/sensordata#mytempsensor"
+  } ],
+  "http://www.w3.org/ns/ssn/hasOutput" : [ {
+    "@id" : "https://www.cs.uni-potsdam.de/bs/research/myno/sensordata#procedureOutput"
+  } ]
+}, {
+  "@id" : "https://www.cs.uni-potsdam.de/bs/research/myno/sensordata#mytempsensor",
+  "@type" : [ "http://www.w3.org/2002/07/owl#NamedIndividual", "http://www.w3.org/ns/sosa/Sensor" ],
+  "http://www.w3.org/ns/sosa/isHostedBy" : [ {
+    "@id" : "https://www.cs.uni-potsdam.de/bs/research/myno/sensordata#ESP32_%p"
+  } ],
+  "http://www.w3.org/ns/sosa/madeObservation" : [ {
+    "@id" : "https://www.cs.uni-potsdam.de/bs/research/myno/sensordata#%name"
+  } ],
+  "http://www.w3.org/ns/sosa/observes" : [ {
+    "@id" : "http://www.ontology-of-units-of-measure.org/resource/om-2/Temperature"
+  } ]
+}, {
+  "@id" : "https://www.cs.uni-potsdam.de/bs/research/myno/sensordata#procedureOutput",
+  "@type" : [ "http://www.w3.org/2002/07/owl#NamedIndividual", "http://www.w3.org/ns/ssn/Output" ],
+  "http://www.w3.org/2000/01/rdf-schema#comment" : [ {
+    "@value" : "%s"
+  } ]
+}, {
+  "@id" : "https://www.cs.uni-potsdam.de/bs/research/myno/sensordata#room21",
+  "@type" : [ "http://www.w3.org/2002/07/owl#NamedIndividual", "http://www.w3.org/ns/sosa/FeatureOfInterest" ],
+  "http://www.w3.org/ns/sosa/isFeatureOfInterestOf" : [ {
+    "@id" : "https://www.cs.uni-potsdam.de/bs/research/myno/sensordata#%name"
+  } ]
+} ]

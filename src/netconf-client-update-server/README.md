@@ -2,31 +2,33 @@ v.0.3
 
 ### Installation 
 
-Install the Python packets for the web-based Update-Server: 
+Installiere die notwendigen Pakete für den NETCONF Client: 
 
 ```
 pip3 install -r requirements.txt
 ```
 
-Compile and copy the tool script `createSig` for the manifests:
+Kompiliere und kopiere das Dienstprogramm `createSig` für das Erstellen der Manifest-Signaturen:
 
 ```
 cd ../tools/micro-ecc-signature/
 make
-cp createSig ../../update-server/
+cp createSig ../../NETCONF-Client/
 ```
 
-Start the Update-Server:
+Dabei sind auch die Hinweise in der dort abgelegten `Readme.md` zum Thema Schlüssel für Update-Server und Hersteller-Server zu beachten.
+
+Starte den NETCONF-Client:
 
 ```
 python3 __init__.py
 ```
 
-Browse the Website GUI under the address 
+Jetzt kann die Weboberfläche unter 
 
-http://127.0.0.1:5000 
+http://127.0.0.1:5000 erreicht werden. 
 
-Use input data for tests:  
+Für Testzwecke können die folgenden Daten (ohne "") genutzt werden: 
 
 ```bash
 input_1_AppId="APP"
