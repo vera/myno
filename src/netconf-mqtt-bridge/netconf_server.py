@@ -2,7 +2,7 @@
 #
 # February 23 2017, Thomas Scheffler <scheffler@beuth-hochschule.de>
 # August 2017, Alexander H. W. Lindemann <allindem@cs.uni-potsdam.de>
-# August 2018-2020, Kristina Sahlmann <sahlmann@uni-potsdam.de>
+# August 2018-2019, Kristina Sahlmann <sahlmann@uni-potsdam.de>
 #
 # Copyright (c) 2017
 #
@@ -26,12 +26,16 @@ from netconf import server as netconf_server
 from ncclient.xml_ import new_ele, sub_ele, to_xml
 import paho.mqtt.client as mqtt
 
-from kafka.json_generator import generate_json_kafka
+#from kafka.json_generator import generate_json_kafka
 from yang_generator_rdflib import generate_yang, delete_yang_module
 import threading
 import traceback
 
 import time
+from pathlib import Path
+
+PATH_RDFLIB = 'yang/time_rdflib.txt'
+PATH_NETCONF = 'yang/time_netconf.txt'
 
 CREATE_TOPIC = 'yang/config/create'
 CREATE_RESPONSE_TOPIC = 'yang/config/create/response/'
@@ -42,10 +46,15 @@ UPDATE_RESPONSE_TOPIC = 'yang/config/update/response/'
 DELETE_TOPIC = 'yang/config/delete'
 DELETE_RESPONSE_TOPIC = 'yang/config/delete/response/'
 
+PING_TOPIC = 'yang/config/ping/'
+PING_TOPIC_RESPONSE = 'yang/config/ping/response/'
+
+
 NC_PORT = 44555 #default (by RFC 6242) 830, but using unprivileged port for testing
-NC_DEBUG = True
+NC_DEBUG = False
 
 BROKER_ADDR = "127.0.0.1"
+#BROKER_ADDR = "192.168.0.110"
 BROKER_PORT = 1883
 NAMESPACE = "https://www.cs.uni-potsdam.de/bs/research/myno/"
 
@@ -66,6 +75,8 @@ global_id_lock = threading.Lock()
 global_config_dict = {}
 global_config_dict_lock = threading.Lock()
 
+delete_dict = {}
+
 class NetconfMethods (netconf_server.NetconfMethods):
 
     #build the config 
@@ -83,8 +94,7 @@ class NetconfMethods (netconf_server.NetconfMethods):
     @classmethod    
     def rpc_get (cls, unused_session, rpc, *unused_params):
         root = etree.Element('data')
-        
-        
+
         for ele in uuid_set:    
             child1 = etree.SubElement(root, 'device', xmlns=NAMESPACE+device_category[ele]) #TODO MAKE VARIABLE
             #child1 = etree.SubElement(root, 'device', xmlns="http://ipv6lab.beuth-hochschule.de/led") #TODO MAKE VARIABLE
@@ -99,14 +109,25 @@ class NetconfMethods (netconf_server.NetconfMethods):
 
     #return schema (yang model)
     def rpc_get_schema(self, unused_session, rpc, *unused_params):
+
         root = etree.Element("data", xmlns="urn:ietf:params:xml:ns:yang:ietf-netconf-monitoring")
         root.text = etree.CDATA(yangModel)
+
         return root
        
     #test method        
     def rpc_hubble (self, unused_session, rpc, *unused_params):
-        return etree.Element("okidoki")    
+        return etree.Element("okidoki")
 
+    def rpc_ping(self, unused_session, rpc, *unused_params):
+        # unping old devices
+        ping()
+        time.sleep(5)
+        unping()
+
+        root = etree.Element('data')
+        etree.SubElement(root, "ping", xlmns=NAMESPACE+"ping")
+        return root
 
 def setup_module (unused_module):
     global nc_server
@@ -169,18 +190,19 @@ def rpc_2_mqtt_bridge_fctn(method_Name, *params):
     sendParams = []
     for kk in params:
         for k in kk:
-            print(to_xml(k,pretty_print=True))
+            logger.debug(to_xml(k,pretty_print=True))
             if k.tag == "uuidInput":
                 uuid = k.text
-            elif checkForParameter(k.tag, command_dict[method_Name][2]):
+            elif checkForParameter(k.tag, (command_dict[uuid])[method_Name][2]):
                 sendParams.append(k)
-                print("parameter k: " + str(k)) #debug ausgabe
+                logger.info("parameter k: " + str(k)) #debug ausgabe
 
 
-    msg = str(req_id) + ";" + command_dict[method_Name][0]
+    msg = str(req_id) + ";" + (command_dict[uuid])[method_Name][0]
     for p in sendParams:
         msg = msg + ";" + p.text
-    topic = command_dict[method_Name][1] + "/" + uuid
+    #topic = command_dict[method_Name][1] + "/" + uuid
+    topic = (command_dict[uuid])[method_Name][1]
 
     logger.info("Publishing " + msg + " to topic " + topic)
     mqtt_client.publish(topic, msg)
@@ -189,6 +211,7 @@ def rpc_2_mqtt_bridge_fctn(method_Name, *params):
     response = None
     counter = 0
 
+    # TODO warten auf ack blockiert alles
     # changed sleep timer to .2 seconds to respond faster
     while counter < 5*120:
         if  str(req_id) in global_responses:
@@ -215,11 +238,11 @@ def rpc_2_mqtt_bridge_fctn(method_Name, *params):
 def mqtt_connect(mqtt_client, userdata, flags, rc):
     logger.info("Connected to broker with result code " + str(rc))
     mqtt_client.subscribe("yang/config/#")
-    mqtt_client.subscribe("response/#")#TODO TEMPORARY
+    mqtt_client.subscribe("response/#")
 
 def mqtt_message(mqtt_client, userdata, msg):
     global yangModel, command_dict
-    global uuid_set
+    global uuid_set, delete_dict
     global device_category
     global device_list
     global ctrl_func_list
@@ -232,6 +255,10 @@ def mqtt_message(mqtt_client, userdata, msg):
         rawmsg = msg.payload.decode().split(";")
         upd_uuid = rawmsg[0]
         upd_conf = rawmsg[1]
+
+        start = time.time()
+        start_timestamp = time.strftime("%H:%M:%S")
+
         if upd_uuid in uuid_set:
             # TODO also for update constrained devices with END message, see create
             # UPDATE = DELETE + CREATE
@@ -251,6 +278,11 @@ def mqtt_message(mqtt_client, userdata, msg):
             elif upd_conf == "END":
                 logger.debug('update: send notfound')
                 mqtt_client.publish(UPDATE_RESPONSE_TOPIC + upd_uuid, 'NOTFOUND')
+
+        end = time.time()
+        total = end - start
+        printTime(start_timestamp, total, PATH_NETCONF, upd_uuid + ',' + "update")
+
     if msg.topic == DELETE_TOPIC:  # yang/config/delete
         del_uuid = msg.payload.decode()
         if del_uuid in uuid_set:
@@ -276,6 +308,9 @@ def mqtt_message(mqtt_client, userdata, msg):
         global_config_dict_lock.acquire()
 
         if conf == "END" and uuid not in uuid_set:
+            start = time.time()
+            start_timestamp = time.strftime("%H:%M:%S")
+
             createDevice(uuid)
 
             del global_config_dict[uuid]
@@ -283,6 +318,11 @@ def mqtt_message(mqtt_client, userdata, msg):
 
             logger.debug('create: send ok')
             mqtt_client.publish(CREATE_RESPONSE_TOPIC + uuid, 'OK')
+
+            end = time.time()
+            total = end - start
+            printTime(start_timestamp, total, PATH_NETCONF, uuid + ',' + "create")
+
             return
 
         if uuid in global_config_dict:
@@ -292,21 +332,31 @@ def mqtt_message(mqtt_client, userdata, msg):
 
         global_config_dict_lock.release()
 
-        
     elif a[0] == "response":
         raw = msg.payload.decode().split(';')
         global_id_lock.acquire()
         global_responses[raw[0]] = raw[1]
         global_id_lock.release()
 
+    elif a[2] == 'ping' and a[3] == 'response':
+        uuid = str(a[4]);
+        delete_dict[uuid] = 'NO'
+        logger.debug ("ping response " + uuid + msg.payload.decode())
+
     printYangModel(yangModel)
 
 def createDevice(uuid):
     global yangModel, uuid_set, command_dict, ctrl_func_list, device_category, device_list, op_list
     try:
+        start = time.time()
+        start_timestamp = time.strftime("%H:%M:%S")
         yangModel_l, command_dict_l, uuid_set_l, device_category_l, device_list_l, ctrl_func_list_l, op_list_l = generate_yang(global_config_dict[uuid])
+        end = time.time()
+        total = end - start
+        printTime(start_timestamp, total, PATH_RDFLIB, uuid + ',' + "create")
+
         #kafka
-        generate_json_kafka(global_config_dict[uuid])
+        #generate_json_kafka(global_config_dict[uuid])
     except Exception as err:
         #print(err)
         traceback.print_exc()
@@ -320,7 +370,9 @@ def createDevice(uuid):
     uuid_set |= uuid_set_l
     for i in command_dict_l:
         build_Netconf_Methods(i)
-    command_dict = {**command_dict, **command_dict_l}  # merging new command dictionaries
+    command_dict[uuid] = command_dict_l  # merging new command dictionaries
+    logger.debug("All CMD: " + str(command_dict))
+
 
     # debug ausgaben
     # print("command_dict" + str(command_dict))
@@ -333,13 +385,16 @@ def createDevice(uuid):
 def deleteDevice(del_uuid):
     global yangModel, command_dict, ctrl_func_list, device_category, uuid_set, device_list, op_list
 
+    start = time.time()
+    start_timestamp = time.strftime("%H:%M:%S")
+
     uuid_set.remove(del_uuid)
     device_category.pop(del_uuid)
     # delete from YANGModel and re-generate it
     device_list.pop(del_uuid)
     ctrl_func_list.pop(del_uuid)
     op_list.pop(del_uuid)
-    command_dict.clear()
+    command_dict.pop(del_uuid)
     yangModel = ""
     for uuid, dev in device_list.items():
         yangModel_n, command_dict_n = delete_yang_module(dev, ctrl_func_list[uuid], op_list[uuid])
@@ -347,21 +402,69 @@ def deleteDevice(del_uuid):
 
         for i in command_dict_n:
             build_Netconf_Methods(i)
-        command_dict = {**command_dict, **command_dict_n}  # merging new command dictionaries
+
+    end = time.time()
+    total = end - start
+    printTime(start_timestamp, total, PATH_RDFLIB, del_uuid + ',' + "delete")
 
     # global_config_dict TODO?
     # delete generated rpc methods TODO?
 
 
 def printYangModel(yangModel):
-    print(yangModel)
+    logger.debug(yangModel)
+    pfad = 'yang/gen_yang.txt'
+    my_file = Path(pfad)
     try:
-        daten = open("yang/gen_yang.txt", "w")
+        if not my_file.parent.exists():
+            my_file.parent.mkdir()
+        if my_file.is_file():
+            logger.debug("file exists")
+            daten = open(pfad, mode='w')
+        else:
+            logger.debug("file does not exists")
+            daten = open(pfad, mode='x')
+
         daten.write(yangModel)
         daten.close()
-    except Exception as err:
-        print('Behandle Laufzeitfehler: ', err)
 
+    except Exception as err:
+        logger.error('Behandle Laufzeitfehler: %s', "major", exc_info=1)
+
+def printTime(start, zeit, path, note):
+    logger.debug(zeit)
+    #path = 'yang\time_rdflib.txt'
+    my_file = Path(path)
+    try:
+        if not my_file.parent.exists():
+            my_file.parent.mkdir()
+        if my_file.is_file():
+            logger.debug("file exists")
+            daten = open(path, mode='a')
+        else:
+            logger.debug("file does not exists")
+            daten = open(path, mode='x')
+
+        timestamp = time.strftime("%H:%M:%S")
+        daten.write(str(start) + ',' + str(timestamp) + "," + str(zeit) + "," + str(note) + '\n')
+        daten.close()
+    except Exception as err:
+        logger.error('Behandle Laufzeitfehler: %s', "major", exc_info=1)
+
+def ping():
+    global uuid_set, delete_dict
+    if uuid_set:
+        for uuid in uuid_set:
+            delete_dict[uuid] = 'YES'
+            mqtt_client.publish(PING_TOPIC + uuid, 'PING')
+
+def unping():
+    global delete_dict
+    if delete_dict:
+        for uuid in delete_dict:
+            if(delete_dict[uuid] == 'YES'):
+                deleteDevice(uuid)
+        delete_dict.clear()
 
 ### ENTRY POINT
 if __name__ == "__main__":

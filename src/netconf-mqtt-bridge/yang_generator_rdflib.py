@@ -1,8 +1,11 @@
-# August 2018-2020, Kristina Sahlmann <sahlmann@uni-potsdam.de>
+# August 2020, Kristina Sahlmann <sahlmann@uni-potsdam.de>
 
+import logging
 import time
 import traceback
 import pyang
+import pyang.context
+import pyang.repository
 import pyang.plugin
 from pyang.statements import Statement
 from optparse import OptionParser
@@ -11,6 +14,9 @@ from rdflib import Graph
 from rdflib.plugins.sparql import prepareQuery
 from rdflib.plugin import register, Parser
 register('json-ld', Parser, 'rdflib_jsonld.parser', 'JsonLDParser')
+
+logger = logging.getLogger("yang-generator")
+NC_DEBUG = False
 
 deviceList = []
 serviceList = []
@@ -155,7 +161,7 @@ def getDescriptionFromList(_list):
 
 
 ##### START YANG
-class DummyRepository(pyang.Repository):
+class DummyRepository(pyang.repository.Repository):
     """Dummy implementation of abstract :class:`pyang.Repository`
        for :class:`pyang.Context` instantiations
     """
@@ -355,9 +361,9 @@ def generateYang(deviceList, data):
         result.substmts.append(devstate)
 
         data.append(result)
-        print("yang data: " + str(result)) #debug output
+        logger.debug("yang data: " + str(result)) #debug output
         #erg = result.search("SIMULATOR8")
-        #print("search statement: " + str(erg)) #debug output
+        #logger.debug("search statement: " + str(erg)) #debug output
 
 #### END YANG
 
@@ -375,7 +381,7 @@ def parseDevices(g, deviceList):
     functionalities = set([])
     properties = set([])
     for row in result:
-        print(" %s %s %s %s" % row)
+        logger.debug(" %s %s %s %s" % row)
         device[generic_id] = str(row["device"])
         services.add(str(row["services"]))
         functionalities.add(str(row["functions"]))
@@ -383,7 +389,7 @@ def parseDevices(g, deviceList):
     device['services'] = list(services)
     device['functionalities'] = list(functionalities)
     device['properties'] = list(properties)
-    print(device)
+    logger.debug(device)
     deviceList.append(device)
     return deviceList
 
@@ -403,7 +409,7 @@ def parseServices(g, serviceList):
     subservices = set([])
     #outDps = []
     for row in result:
-        print(" %s %s %s %s" % row)
+        logger.debug(" %s %s %s %s" % row)
         service = {}
         service['id'] = str(row["services"])
         functionalities.add(str(row["functions"]))
@@ -414,7 +420,7 @@ def parseServices(g, serviceList):
     service['functionalities'] = list(functionalities)
     service['operations'] = list(operations)
     service['subservices'] = list(subservices)
-    print(service)
+    logger.debug(service)
     serviceList.append(service)
 
     # Type 2 subservices with outDPs
@@ -426,7 +432,7 @@ def parseServices(g, serviceList):
     result = g.query(q)
 
     for row in result:
-        print(" %s %s %s %s" % row)
+        logger.debug(" %s %s %s %s" % row)
         service = {}
         service['id'] = str(row["subservices"])
         service['functionalities'] = [str(row["functions"])]
@@ -434,7 +440,7 @@ def parseServices(g, serviceList):
         service['outDps'] = [str(row["outDps"])]
         if (str(row["operations"])):
             service['operations'] = [str(row["operations"])]  # new
-        print(service)
+        logger.debug(service)
         serviceList.append(service)
     return serviceList
 
@@ -447,12 +453,12 @@ def parseServices(g, serviceList):
     # result = g.query(q)
     #
     # for row in result:
-    #     print(" %s %s %s" % row)
+    #     logger.debug(" %s %s %s" % row)
     #     service = {}
     #     service['id'] = str(row["subservices"])
     #     service['functionalities'] = [str(row["functions"])]
     #     service['operations'] = [str(row["operations"])] #new
-    #     print(service)
+    #     logger.debug(service)
     #     serviceList.append(service)
     # return serviceList
 
@@ -465,7 +471,7 @@ def parseOutDps(g, outDpList):
     result = g.query(q, initNs={"base": "http://yang-netconf-mqtt#", "onem2m": "http://www.onem2m.org/ontology/Base_Ontology/base_ontology#"}, base="http://yang-netconf-mqtt#")
 
     for row in result:
-        print(" %s %s %s %s " % row)
+        logger.debug(" %s %s %s %s " % row)
         outDp = {}
         outDp['id'] = str(row["outDp"])
         outDp['mqttTopic'] = {'@value': str(row["mqttTopic"])}
@@ -475,7 +481,7 @@ def parseOutDps(g, outDpList):
             outDp['units'] = {'@value': unitValue}
 
         outDpList.append(outDp)
-        print(outDpList)
+        logger.debug(outDpList)
     return outDpList
 
 def parseInDps(g, inDpList):
@@ -487,13 +493,13 @@ def parseInDps(g, inDpList):
     result = g.query(q, initNs={"base": "http://yang-netconf-mqtt#", "onem2m": "http://www.onem2m.org/ontology/Base_Ontology/base_ontology#"}, base="http://yang-netconf-mqtt#")
 
     for row in result:
-        print(" %s %s " % row)
+        logger.debug(" %s %s " % row)
         inDp = {}
         inDp['id'] = str(row["inDp"])
         inDp['mqttTopic'] = {'@value': str(row["mqttTopic"])}
 
         inDpList.append(inDp)
-        print(inDpList)
+        logger.debug(inDpList)
     return inDpList
 
 
@@ -508,13 +514,13 @@ def parseCtrlFunctionality(g, ctrlfuncList):
                      base="http://yang-netconf-mqtt#")
 
     for row in result:
-        print(" %s %s %s " % row)
+        logger.debug(" %s %s %s " % row)
         func = {}
         func['id'] = str(row["ctrlFunction"])
         func['commands'] = [str(row["command"])]
         func['properties'] = [str(row["property"])]
         ctrlfuncList.append(func)
-        print(ctrlfuncList)
+        logger.debug(ctrlfuncList)
     return ctrlfuncList
 
 
@@ -529,13 +535,13 @@ def parseConfigFunctionality(g, configfuncList):
                      base="http://yang-netconf-mqtt#")
 
     for row in result:
-        print(" %s %s %s " % row)
+        logger.debug(" %s %s %s " % row)
         func = {}
         func['id'] = str(row["configFunction"])
         func['commands'] = [str(row["command"])]
         func['properties'] = [str(row["property"])]
         configfuncList.append(func)
-        print(configfuncList)
+        logger.debug(configfuncList)
     return configfuncList
 
 def parseAutomationFunctionality(g, autofuncList):
@@ -549,13 +555,13 @@ def parseAutomationFunctionality(g, autofuncList):
                      base="http://yang-netconf-mqtt#")
 
     for row in result:
-        print(" %s %s %s " % row)
+        logger.debug(" %s %s %s " % row)
         func = {}
         func['id'] = str(row["autoFunction"])
         func['commands'] = [str(row["command"])]
         func['properties'] = [str(row["property"])]
         autofuncList.append(func)
-        print(autofuncList)
+        logger.debug(autofuncList)
     return autofuncList
 
 def parseMeasureFunctionality(g, measurefuncList):
@@ -570,12 +576,12 @@ def parseMeasureFunctionality(g, measurefuncList):
                      base="http://yang-netconf-mqtt#")
 
     for row in result:
-        print(" %s %s " % row)
+        logger.debug(" %s %s " % row)
         func = {}
         func['id'] = str(row["ctrlFunction"])
         func['properties'] = [str(row["property"])]
         measurefuncList.append(func)
-        print(measurefuncList)
+        logger.debug(measurefuncList)
     return measurefuncList
 
 
@@ -591,12 +597,12 @@ def parseEventFunctionality(g, eventfuncList):
                      base="http://yang-netconf-mqtt#")
 
     for row in result:
-        print(" %s %s " % row)
+        logger.debug(" %s %s " % row)
         func = {}
         func['id'] = str(row["eventFunction"])
         func['properties'] = [str(row["property"])]
         eventfuncList.append(func)
-        print(eventfuncList)
+        logger.debug(eventfuncList)
     return eventfuncList
 
 
@@ -614,13 +620,13 @@ def parseOpStates(g, opStateList):
     opstate = {}
     statePattern = []
     for row in result:
-        print(" %s %s %s" % row)
+        logger.debug(" %s %s %s" % row)
         opstate['id'] = str(row["opState"])
         opstate['properties'] = [str(row["opStateDesc"])]
         statePattern.append({'@value' : str(row["statePattern"])})
     opstate['dataRestrictions'] = statePattern
     opStateList.append(opstate)
-    print(opStateList)
+    logger.debug(opStateList)
     return opStateList
 
 
@@ -638,7 +644,7 @@ def parseOperations(g, opList):
     result = g.query(q, initNs={"base": "http://yang-netconf-mqtt#",
                                 "onem2m": "http://www.onem2m.org/ontology/Base_Ontology/base_ontology#"}, base="http://yang-netconf-mqtt#")
     for row in result:
-        print(" %s %s %s %s %s %s %s" % row)
+        logger.debug(" %s %s %s %s %s %s %s" % row)
         operation = str(row["operation"])
         if(len(opList) == 0):
             op = {}
@@ -670,7 +676,7 @@ def parseOperations(g, opList):
                 if (row["inDps"]):
                     op['inDps'] = {'@value': str(row["inDps"])}
                 opList.append(op)
-    print(opList)
+    logger.debug(opList)
     return opList
 
 
@@ -685,7 +691,7 @@ def parseCommands(g, cmdList):
     result = g.query(q, initNs={"base": "http://yang-netconf-mqtt#",
                                 "onem2m": "http://www.onem2m.org/ontology/Base_Ontology/base_ontology#"}, base="http://yang-netconf-mqtt#")
     for row in result:
-        print(" %s %s " % row)
+        logger.debug(" %s %s " % row)
         command = str(row["command"])
         if(len(cmdList) == 0):
             cmd = {}
@@ -705,7 +711,7 @@ def parseCommands(g, cmdList):
                 cmd['inputs'] = [str(row["inputs"])]
                 cmdList.append(cmd)
     # cmd['outputs'] = [str(row["outputs"])]
-    print(cmdList)
+    logger.debug(cmdList)
     return cmdList
 
 
@@ -721,7 +727,7 @@ def parseInputs(g, inputList):
                                 "onem2m": "http://www.onem2m.org/ontology/Base_Ontology/base_ontology#"}, base="http://yang-netconf-mqtt#")
 
     for row in result:
-        print(" %s %s %s " % row)
+        logger.debug(" %s %s %s " % row)
         inp = str(row["input"])
         if(len(inputList) == 0):
             input = {}
@@ -760,7 +766,7 @@ def parseInputs(g, inputList):
 
     # substructure
     for row in result:
-        print(" %s %s %s %s %s " % row)
+        logger.debug(" %s %s %s %s %s " % row)
         inp = str(row["input"])
     # input is already in the list. only add variables
         for i in inputList:
@@ -785,7 +791,7 @@ def parseInputs(g, inputList):
     # datatypes
     print("parse inputs with datatypes")
     for row in result:
-        print(" %s %s %s %s %s" % row)
+        logger.debug(" %s %s %s %s %s" % row)
         inp = str(row["input"])
     # input is already in the list. only add datatypes
         for i in inputList:
@@ -803,7 +809,7 @@ def parseInputs(g, inputList):
                         i['variable'] = (str(row["min"] + '..' + str(row["max"])))
                     else:
                         i['variable'].append(str(row["min"] + '..' + str(row["max"])))
-    print(inputList)
+    logger.debug(inputList)
     return inputList
 
 def parseOutputs(g, outputList):
@@ -818,7 +824,7 @@ def parseOutputs(g, outputList):
     #                             "onem2m": "http://www.onem2m.org/ontology/Base_Ontology/base_ontology#"}, base="http://yang-netconf-mqtt#")
     #
     # for row in result:
-    #     print(" %s %s %s " % row)
+    #     logger.debug(" %s %s %s " % row)
     #
     # _output = {}
     # _output['id'] = rawOutput[generic_id]
@@ -845,7 +851,7 @@ def parseProperties(g, propList):
                                 "onem2m": "http://www.onem2m.org/ontology/Base_Ontology/base_ontology#"}, base="http://yang-netconf-mqtt#")
 
     for row in result:
-        print(" %s %s %s " % row)
+        logger.debug(" %s %s %s " % row)
         if str(row["type"]) != "http://www.w3.org/2002/07/owl#NamedIndividual":
             prop = {}
             prop['id'] = str(row["property"])
@@ -864,7 +870,7 @@ def parseProperties(g, propList):
             base="http://yang-netconf-mqtt#")
 
     for row in result:
-        print(" %s %s %s " % row)
+        logger.debug(" %s %s %s " % row)
         if str(row["type"]) != "http://www.w3.org/2002/07/owl#NamedIndividual":
             prop = {}
             prop['id'] = str(row["property"])
@@ -883,7 +889,7 @@ def parseProperties(g, propList):
 
     dataRestriction = []
     for row in result:
-        print(" %s %s %s " % row)
+        logger.debug(" %s %s %s " % row)
         if str(row["type"]) != "http://www.w3.org/2002/07/owl#NamedIndividual":
             prop = {}
             prop['id'] = str(row["property"])
@@ -892,7 +898,7 @@ def parseProperties(g, propList):
             prop['dataRestrictions'] = dataRestriction
             propList.append(prop)
 
-    print(propList)
+    logger.debug(propList)
     return propList
 
 
@@ -927,7 +933,6 @@ def generate_yang(json_str):
     inputList = []
     outputList = []
     propList = []
-
 
     g = Graph()
     g.parse(data=json_str, format="json-ld", base="http://yang-netconf-mqtt#")
@@ -1037,7 +1042,8 @@ def generate_yang(json_str):
     plugin.add_opts(optparser)
 
     # pyang plugins also need a pyang.Context
-    ctx = pyang.Context(DummyRepository())
+    #ctx = pyang.Context(DummyRepository())
+    ctx = pyang.context.Context(DummyRepository())
 
     # which offers plugin-specific options (just take defaults)
     ctx.opts = optparser.parse_args([])[0]
@@ -1082,6 +1088,10 @@ def generate_yang(json_str):
 
 def delete_yang_module(device_list, ctrl_func_list, op_list):
     # generate yang model again
+    global ctrlfuncList, opList
+
+    ctrlfuncList = ctrl_func_list
+    opList = op_list
 
     yangdata = []
     try:
@@ -1106,7 +1116,7 @@ def delete_yang_module(device_list, ctrl_func_list, op_list):
     plugin.add_opts(optparser)
 
     # pyang plugins also need a pyang.Context
-    ctx = pyang.Context(DummyRepository())
+    ctx = pyang.context.Context(DummyRepository())
 
     # which offers plugin-specific options (just take defaults)
     ctx.opts = optparser.parse_args([])[0]
@@ -1130,13 +1140,20 @@ def delete_yang_module(device_list, ctrl_func_list, op_list):
     return (yang, mqtt_commands)
 
 if __name__ == "__main__":
+
+    if NC_DEBUG:
+        logging.basicConfig(level=logging.DEBUG)
+    else:
+        logging.basicConfig(level=logging.INFO)
+
     uuid_set = set()
     start = time.time()
 
     with open('ontology/bright_motion_led-rgb.owl') as data_file:
     #with open('ontology/mqtt-cap-json-v5-2-json-ld.owl') as data_file:
         yang, mqtt_commands, uuid_set, device_category, deviceList, ctrlfuncList, opList = generate_yang(data_file.read())
-        print(yang)
+        logger.debug(yang)
 
     end = time.time()
+    print('TIME FOR PARSING: ')
     print(end - start)
