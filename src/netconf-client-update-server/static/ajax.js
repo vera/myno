@@ -1,7 +1,7 @@
 var notificationDiv = document.getElementById('notification');
 var errorDiv = document.getElementById('error');
 
-document.addEventListener("DOMContentLoaded", function(event) { 
+document.addEventListener("DOMContentLoaded", function() { 
 	getDivs();
 	updateValues();
 });
@@ -11,67 +11,68 @@ function getDivs() {
 	errorDiv = document.getElementById('error');
 }
 
-function updateValues() { //gets data from "/ajax"-path, then calls updateUI()
-            
-            var request = new XMLHttpRequest(); 
-            
-			request.onload = function(elements) { 
-				var result = JSON.parse(request.responseText);
-				console.log(result)
-				updateUI(result)
-				};
-			
-			request.open("GET", $SCRIPT_ROOT+"/ajax", true);
-			request.send();
+function updateValues() {
+	// Gets data from "/ajax"-path, then calls updateUI
+	var request = new XMLHttpRequest(); 
 
-        }
-setInterval(function() {
-    updateValues();
-}, 1000);
+	request.onload = function() {
+		var result = JSON.parse(request.responseText);
+		updateUI(result);
+	};
+
+	request.open("GET", "/ajax", true);
+	request.send();
+}
 
 function updateUI(data) {
-
 	if(!errorDiv || !notificationDiv) {
-		getDivs(); 	//needed because some browsers ignore the "DOMContentLoaded" listener 
-	}				//or call it too early so we re-init the two variables
-
-	//sensor values
-	for (let key in data.sensors) {
-    	let value = data.sensors[key];  
-    	var element = document.getElementById(key);
-    	
-    	if(element)
-			element.innerText=value[0];
+		// Needed because some browsers ignore the "DOMContentLoaded" listener
+		// or call it too early so we re-init the two variables
+		getDivs();
 	}
 
-	//nonce values
-	for (let key in data.nonce) {
-    	let value = data.nonce[key];
-    	var element = document.getElementById(key);
+	// Update sensor values
+	for (let key in data.sensors) {
+		let value = data.sensors[key];
+		var element = document.getElementById(key);
+		if (element) element.innerText = value[1] + " (" + value[0] + ")";
+	}
 
-    	if(element)
-			element.value=value;
+	// Update nonce values
+	for (let key in data.nonce) {
+		let value = data.nonce[key];
+		var element = document.getElementById(key);
+
+		if (element) element.value = value;
 	}
 		
 	//notification and error popups
-	if(data.error!=""){
-		errorDiv.innerHTML=data.error;
+	if (data.error && data.error.length > 0) {
+		errorDiv.innerHTML = '';
+		for (let error of data.error) {
+			errorDiv.innerHTML += error[0] + ': ' + error[1] + '<br>';
+		}
 		fadeIn(errorDiv, 1000);
 	}
 	else {
 		fadeOut(errorDiv, 1000);
 	}
 	
-	if(data.notification!=""){
-		notificationDiv.innerHTML=data.notification;
+	if (data.notification && data.notification.length > 0){
+		notificationDiv.innerHTML = '';
+		for (let notification of data.notification) {
+			notificationDiv.innerHTML += notification[0] + ': ' + notification[1] + '<br>';
+		}
 		fadeIn(notificationDiv, 1000);
 		}
 	else {
 		fadeOut(notificationDiv, 1000);
 	}
-	
 }
 
+setInterval(function() {
+    updateValues();
+}, 5000);
 
 //UI animations for notifications and errors
 

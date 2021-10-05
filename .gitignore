@@ -3,3 +3,4 @@ __pycache__
 *.key
 .venv
 src/netconf-mqtt-bridge/yang
+createSig

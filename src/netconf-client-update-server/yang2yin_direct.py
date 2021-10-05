@@ -123,7 +123,6 @@ def init_ctx(text_to_parse):
     final_output=""
 
     if emit_obj is not None and len(modules) > 0:
-        print("not none")
         tmpfile = None
         if (1==1):#o.outfile == None:
             if sys.version < '3':

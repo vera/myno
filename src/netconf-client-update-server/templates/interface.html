@@ -1,41 +1,114 @@
 <!DOCTYPE>
 <html>
-<head>
-	<link rel="stylesheet" href='/static/style.css' />
-	<link rel="stylesheet" href='/static/minimal buttons.css' />
-	<script src="/static/ajax.js"></script>
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body>
+	<head>
+		<link rel="stylesheet" href='/static/style.css' />
+		<link rel="stylesheet" href='/static/minimal buttons.css' />
+		<script src="/static/ajax.js"></script>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	</head>
+	<body>
+	<!-- <script>
+		$SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+	</script> -->
 
-<script>
-	$SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
-</script>
+	<p>
+		<a href="/">
+			<button id="forwardBtn" class="button button_secondary">Get Devices</button>
+		</a>
+	</p>
 
-<form action="/" method="post">
-    <button name="forwardBtn" type="submit" class="button button_secondary">Get Devices</button>
-</form>
+	<hr>
 
-<br>
-<hr>
-		
-  {{ things_list }}
-  
-<br>
-<hr>
-<br>
-  	
-  {{ selected_rpc_text }}
-  
-<br>
+	<div class='notification' id='notification'></div>
+	<br>
+	<div class='error' id='error'></div>
 
-<br>
-<hr>
-<br>
+	<hr>
 
-<div class='notification' id='notification'>  </div> <br>
-<div class='error' id='error'>  </div> <br>
+	{% if device_dict.items() %}
+		{% for device_id, device_data in device_dict.items() %}
+			<br>
+			<p class="thing">{{ device_data[0] }}</p>
+			<p class="uuid">{{ device_id }}</p>
+			<br>
+			{% if device_data[1]['rpcs'] %}
+				{% for key, value in device_data[1]['rpcs'].items() %}
+					{% if value[2] == 'union' %}
+						<!--
+						thing, name, description, param_name, param_type_name, parameters
+						=
+						device_uuid, key, value[0],value[1],value[2], value[3]
+						parameter_entries = ""
+						parameters.sort(reverse=True)
+						for parameter in parameters:
+							parameter_entries = parameter_entries + parameter + ";"
+						content = "<div class='form_function'><form action = '/function_call/" + str(thing) +  "/" + str(name) + "/" + str(param_type_name) + "/" + str(param_name) + "/" + str(parameter_entries) +"' method = 'POST'>"
+						content = content + "<fieldset><legend>" +str(name) +"<br> </legend >"
+						for parameter in parameters:
+							content = content + "<label>"+parameter+":</label>  <input type='number' id="+str(parameter)+" name =" + parameter + \
+										" min='0' max='255' value = 255 required maxlength='3' minlength = '1'     >"
+						content = content + "<button type='submit' class='button device_function_button'>"+description+"</button>"
+						content = content + "</fieldset></form></div>"
+						return content;
+						-->
+					{% elif value[1] is sequence and value[1]|length >= 1 %}
+						<div class='form_function' id="{{ key }}">
+							<form action="/function_call/{{ device_id }}/{{ key }}" method="POST" enctype="multipart/form-data">
+								<fieldset>
+									<div><legend>{{ key }}<br></legend></div>
+									<table style="padding-bottom:10px!important;">
+									{% for parameter in value[1] %}
+										{% if parameter == "input_9_OuterSignature" %}
+											<tr>
+												<td><label>{{ parameter }}:</label></td>
+												<td><input type="text" id="{{ parameter }}" name="{{ parameter }}" class="form-control" disabled style="background-color: gray;"></div></td>
+											</tr>
+										{% else %}
+											<tr>
+												<td><label>{{ parameter }}:</label></td>
+												{% if parameter == "inputUpdateImage" %}
+													<td><input type="file" id="{{ parameter }}" name="{{ parameter }}" class="form-control"></div></td>
+												{% else %}
+													<td><input id="{{ parameter }}" name="{{ parameter }}" class="form-control"></div></td>
+												{% endif %}
+										{% endif %}
+									{% endfor %}
+									</table>
+									<button type='submit' class='button device_function_button'>{{ value[0] }}</button>
+								</fieldset>
+							</form>
+						</div>
+					{% elif value[2] %}
+						<!--
+						thing, name, description, param_name, param_type_name, parameters
+						=
+						device_uuid, key, value[0], value[1], value[2], value[3]
 
-</body>
+						parameter_entries = ""
+
+						for parameter in parameters:
+							parameter_entries = parameter_entries + "<p><a href='/function_call/" + str(thing) + "/" + str(name) + "/"  + str(param_type_name) + "/"  + str(param_name) + "/" + str(parameter) + "'>" + str(parameter) +  "</a></p>"
+
+						content = " <div class='dropdown' onclick=''> <span>" + name + " ▾</span> <div class='dropdown-content'>"
+						return content + parameter_entries + "</div></div>"
+						-->
+					{% else %}
+						<a href="/function_call/{{ device_id }}/{{ key }}" class='button device_function_button' title="{{ value[0] }}">{{ key }}</a>
+					{% endif %}
+				{% endfor %}
+			{% endif %}
+			{% if device_data[1]['sensors'] %}
+				<br>
+				{% for key, value in device_data[1]['sensors'].items() %}
+					<div class='sensor'>{{ key }} &nbsp; <p id="{{ value }}">&nbsp; &nbsp;</p></div>
+				{% endfor %}
+			{% endif %}
+		{% endfor %}
+	{% else %}
+	<br>
+	<p class="uuid">No devices available, press "Get Devices" to refresh.</p>
+	{% endif %}
+	<br>
+	<hr>
+	</body>
 </html>
-

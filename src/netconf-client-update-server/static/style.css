@@ -54,16 +54,18 @@ form {
 
 .notification {
 	color: #111111;
-	background-color: #EEEEEE;
+	background-color: #CCCCCC;
 	border-radius: 0.317rem;
+	margin: 5px 0;
 	padding: 0.75rem 1rem;
 	opacity:0;
 }
 
 .error {
 	color: white;
-	background-color: #FF7744;
+	background-color: #DE3163;
 	border-radius: 0.317rem;
+	margin: 5px 0;
 	padding: 0.75rem 1rem;
 	opacity:0;
 }
