@@ -7,7 +7,7 @@ import time
 from lxml import etree # Needed because ncclient sends lxml, not xml object
 from ncclient import xml_
 
-import config
+from . import config
 
 # For benchmarking
 benchmark_array_slices = []

@@ -1,19 +1,9 @@
-# Copyright (c) 2020      Michael Nowak
-#               2020-2021 Vera Clemens
- 
-from flask import Flask, render_template, jsonify, url_for, request, redirect
+from flask import render_template, jsonify, url_for, request, redirect
 
-import logging
-import threading
-
-import config
-import mqtt_client
-import netconf_client
-import notifications
-import update_server
-
-app = Flask(__name__)
-reload_event = threading.Event()
+from . import config
+from . import mqtt_client
+from . import netconf_client
+from . import notifications
 
 @app.route("/", methods=['GET'])
 def root():
@@ -25,7 +15,7 @@ def root():
 	reload_event.set()
 
 	return render_template(config.html_template_file,
-	                       device_dict=netconf_client.device_dict)
+												device_dict=netconf_client.device_dict)
 
 @app.route('/ajax', methods=['GET'])
 def ajax():
@@ -33,10 +23,10 @@ def ajax():
 	Returns errors, notifications, nonces and sensor data as JSON.
 	"""
 	return jsonify(error=notifications.get_errors(),
-								 notification=notifications.get_info(),
-								 events=notifications.get_events(),
-								 sensors=mqtt_client.sensor_dict,
-								 nonce=netconf_client.nonce_dict)
+								notification=notifications.get_info(),
+								events=notifications.get_events(),
+								sensors=mqtt_client.sensor_dict,
+								nonce=netconf_client.nonce_dict)
 
 @app.route('/function_call/<thing>/<function>', defaults={'param_type' : None,'param_name': None, 'value': None}, methods=['GET', 'POST'])
 @app.route('/function_call/<thing>/<function>/<param_name>', methods=['GET', 'POST']) # ?
@@ -47,11 +37,11 @@ def function_click(thing, function, param_type, param_name, value):
 	"""
 	if function == "funcPubUpdateImage":
 		xml_rpcs = update_server.publish_image(thing, function,
-																					 netconf_client.device_dict[thing][1]['rpcs']['funcPubUpdateImage'][4] + '/' + thing,
-																					 request.files["inputUpdateImage"])
+																					netconf_client.device_dict[thing][1]['rpcs']['funcPubUpdateImage'][4] + '/' + thing,
+																					request.files["inputUpdateImage"])
 	elif function == "funcPubUpdateManifest":
 		xml_rpcs = update_server.build_manifest_rpcs(thing, function,
-																								 sorted(request.form.items()))
+																								sorted(request.form.items()))
 	else:
 		xml_rpcs = netconf_client.build_xml_rpc(thing, function, param_type, param_name, value)
 	
@@ -71,22 +61,3 @@ def function_click(thing, function, param_type, param_name, value):
 @app.template_test("isAutoOrConfFunction")
 def is_auto_or_conf_function(function):
 	return "Auto" in function[0] or "Conf" in function[0]
-
-# @app.after_request
-# def add_security_headers(resp):
-# 	resp.headers['Content-Security-Policy']='script-src \'self\' \'sha256-N3ja5c9AUGaenD3XP4BFw/16KpljZES4k4hvrxFGEPg=\''
-# 	return resp
-
-if __name__ == "__main__":
-	if(config.SUPPRESS_WERKZEUG_LOGS):
-		werkzeugLogger = logging.getLogger('werkzeug')
-		werkzeugLogger.setLevel(logging.ERROR)
-
-	logging.basicConfig(level=logging.INFO)
-
-	# Start thread for MQTT client
-	mqtt_client.async_init(app)
-	# Start thread for NETCONF client
-	netconf_client.async_init(reload_event)
-	# Start flask webserver
-	app.run(debug=True, host='0.0.0.0')

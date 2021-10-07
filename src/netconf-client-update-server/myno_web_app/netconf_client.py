@@ -1,25 +1,28 @@
 from lxml import etree # Needed because ncclient sends lxml, not xml object
 from ncclient import manager, xml_
 from socket import error as socket_error
-from yang2yin_direct import direct_yang2yin_call
+from .yang2yin_direct import direct_yang2yin_call
 
 import csv
 import logging
 import threading
 import xml.etree.ElementTree as ET
 
-import config
-import notifications
-import namespaceparser
-import mqtt_client
+from . import config
+from . import notifications
+from . import namespaceparser
+from . import mqtt_client
 
 device_dict = {}
 netconf_manager = None
 nonce_dict={}
 global_rpc_lock = threading.Lock()
+topics=[]
 
 def async_init(reload_event):
-	threading.Thread(target=init, args=(reload_event,)).start()
+	netconf_client_thread = threading.Thread(target=init, args=(reload_event,))
+	netconf_client_thread.daemon = True
+	netconf_client_thread.start()
 
 def init(reload_event):
 	global netconf_manager

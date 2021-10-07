@@ -1,6 +1,12 @@
 .idea
+
 __pycache__
-*.key
+.pytest_cache
+*.egg-info
 .venv
+
+*.key
+
 src/netconf-mqtt-bridge/yang
+
 createSig

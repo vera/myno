@@ -4,15 +4,17 @@ import datetime
 import logging
 import threading
 
-import config
-import update_server
+from . import config
+from . import update_server
 
 mqtt = Mqtt()
 
 sensor_dict = {}
 
 def async_init(app):
-	threading.Thread(target=init, args=[app]).start()
+	mqtt_thread = threading.Thread(target=init, args=[app])
+	mqtt_thread.daemon = True
+	mqtt_thread.start()
 
 def init(app):
 	app.config['MQTT_BROKER_URL'] = config.MQTT_BROKER_URL
