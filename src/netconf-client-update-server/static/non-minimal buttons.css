@@ -1,5 +1,4 @@
 .buttons {
-
   width: 110px;
   height: 40px;
   text-align: center;
@@ -66,4 +65,3 @@
 .set.black .btn.pri:hover {
   background: #444;
 }
-

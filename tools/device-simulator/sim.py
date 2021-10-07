@@ -10,7 +10,9 @@ import os
 import subprocess as sp
 
 threadLock = threading.Lock()
-DEVICE_UUID = "MYNO-UPDATE-8A12-4F4F-8F69-6B8F3C2E78DD"
+#DEVICE_UUID = "MYNO-UPDATE-8A12-4F4F-8F69-6B8F3C2E78DD"
+DEVICE_UUID = "110A-4F4F-8F69-6B8F3C2E78ED"
+BOARD_NAME = "Board10"
 
 DEVICE_TOKEN = 123456
 DEVICE_FW_VERSION = 1
@@ -20,13 +22,15 @@ BROKER_ADDR = "localhost"
 BROKER_PORT = 1883
 
 # ONTOLOGY_FILE = "MYNO-Update-json.owl"
-ONTOLOGY_FILE = "MYNO-Update-new-opt.owl"
+# ONTOLOGY_FILE = "MYNO-Update-new-opt.owl"
+ONTOLOGY_FILE = "SensWOUnit.owl"
 
 CONFIG_TOPIC = 'yang/config'
 WILDCARD = "/#"
 UPDATE_TOPIC = 'yang/update/+/' + DEVICE_UUID
 CMD_TOPIC = 'led/' + DEVICE_UUID
-SENSOR_TOPIC = 'sensor/moisture/' + DEVICE_UUID
+#SENSOR_TOPIC = 'sensor/moisture/' + DEVICE_UUID
+SENSOR_TOPIC = 'sensor/moisture/moisture_1/' + DEVICE_UUID
 RESPONSE_TOPIC = 'response/' + DEVICE_UUID
 
 deviceAppID = "APP"
@@ -222,7 +226,7 @@ if __name__ == "__main__":
 
     with open(ONTOLOGY_FILE) as data_file:
         Ontologystring = str(data_file.read())
-        ontology = DEVICE_UUID + ";" + Ontologystring.replace("%s", DEVICE_UUID)
+        ontology = DEVICE_UUID + ";" + Ontologystring.replace("%sBoardName", BOARD_NAME).replace("%s", DEVICE_UUID)
         mqtt_client.publish(CONFIG_TOPIC, ontology)
         mqtt_client.publish(CONFIG_TOPIC, DEVICE_UUID + ";END")
         print("Ontology published")

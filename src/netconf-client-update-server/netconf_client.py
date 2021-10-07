@@ -18,11 +18,11 @@ netconf_manager = None
 nonce_dict={}
 global_rpc_lock = threading.Lock()
 
-def async_init():
-	threading.Thread(target=init).start()
+def async_init(reload_event):
+	threading.Thread(target=init, args=(reload_event,)).start()
 
-def init():
-	global netconf_manager, device_dict
+def init(reload_event):
+	global netconf_manager
 
 	try:
 		# Connect to NETCONF server via manager
@@ -33,14 +33,13 @@ def init():
 																					allow_agent=False, hostkey_verify=False,
 																					look_for_keys=False,
 																					manager_params={"timeout": 300})
-		device_dict = get_devices()
+		_get_devices()
+		while True:
+			reload_event.wait()
+			reload_event.clear()
+			_get_devices()
+			logging.info("Reloaded devices")
 
-		# Subscribe to sensor topics
-		for device_id, device_data in device_dict.items():
-			if not device_dict[device_id][1] or not device_dict[device_id][1]['sensors']:
-				continue
-			for topic in device_dict[device_id][1]['sensors'].values():
-				mqtt_client.subscribe(topic)
 	except socket_error as serr:
 		notifications.add_error('netconf_client.init(): Socket error. '
 														+ 'Maybe unable to open socket.')
@@ -49,7 +48,19 @@ def init():
 		notifications.add_error('Error in netconf_client.init().')
 		logging.exception("netconf_client.init(): Error. Something else not caught by socket_error.")
 
-def get_devices(*args, **kwargs):
+def _get_devices():
+	global device_dict
+
+	device_dict = get_devices()
+
+	# Subscribe to sensor topics
+	for device_id, device_data in device_dict.items():
+		if not device_dict[device_id][1] or not device_dict[device_id][1]['sensors']:
+			continue
+		for topic, _ in device_dict[device_id][1]['sensors'].values():
+			mqtt_client.subscribe(topic)
+
+def get_devices():
 	"""
 	Sends <get> and <get-schema> RPCs and builds device dictionary based on
 	the responses.
@@ -63,7 +74,6 @@ def get_devices(*args, **kwargs):
 		sensors: { func_name: mqtt_topic }
 	}
 	"""
-	parseUpdate = kwargs.get('update', None)
 
 	res = {}
 
@@ -71,7 +81,7 @@ def get_devices(*args, **kwargs):
 		# Get device dictionary
 		devices = get(netconf_manager)
 		# Get RPC + sensor dictionary
-		scheme_dict = get_schema(netconf_manager, update=parseUpdate)
+		scheme_dict = get_schema(netconf_manager)
 
 		for key, value in devices.items():
 			res[key] = (value[0], scheme_dict[value[1]])
@@ -115,10 +125,10 @@ def get(m):
 	for data in tree:
 		# Get <data> tag
 		if("data" in data.tag):
-			scheme_data = data
+			schema_data = data
 
 	# Iterate over <data> tag's children
-	for device in scheme_data:
+	for device in schema_data:
 		# Get <device> tag
 		if("device" in device.tag):
 			# Extract XML namespace
@@ -138,7 +148,7 @@ def get(m):
 
 	return devices
 
-def get_schema(m, *args, **kwargs):
+def get_schema(m):
 	"""Sends <get-schema> RPC to NETCONF server and parses XML response into dictionary.
 	Dictionary entries are structured like:
 	{ rpcs: { rpc_name = (rpc_description, param_name, param_type_name, parameters) },
@@ -178,8 +188,6 @@ def get_schema(m, *args, **kwargs):
 	"""
 	modules = {}
 
-	parseUpdate = kwargs.get('update', None)
-
 	# Make get-schema RPC (with empty identifier)
 	get_schema_string = (str(m.get_schema('')))
 	print(get_schema_string)
@@ -191,25 +199,25 @@ def get_schema(m, *args, **kwargs):
 	for child in root:
 		# Get <data> tag
 		if("data" in child.tag):
-			scheme_data = child.text
+			schema_data = child.text
 
-	if not scheme_data:
+	if not schema_data:
 		logging.warning("No <data> tag found in <get-schema> RPC response")
 		return
 
 	# Split multiple modules and convert module(s) to YIN
 	# (see https://datatracker.ietf.org/doc/html/rfc7950#section-13)
 	# Resulting YIN contains <rpc> and <container> tags
-	multimodule = scheme_data.split("module")
+	multimodule = schema_data.split("module")
 	if len(multimodule) > 2:
 		logging.info("Multiple modules found in <get-schema> RPC response")
 		xml_root = []
 		for s in multimodule[1:]:
-			xml_scheme = direct_yang2yin_call("module" + s)
-			xml_root.append(ET.fromstring(xml_scheme))
+			xml_schema = direct_yang2yin_call("module" + s)
+			xml_root.append(ET.fromstring(xml_schema))
 	else:
-		xml_scheme = direct_yang2yin_call(scheme_data)
-		xml_root = [ET.fromstring(xml_scheme)]
+		xml_schema = direct_yang2yin_call(schema_data)
+		xml_root = [ET.fromstring(xml_schema)]
 
 	logging.info("Parsed modules to YIN")
 	
@@ -223,8 +231,7 @@ def get_schema(m, *args, **kwargs):
 			rpc_descriptions = []
 			
 			# Get all <rpc> tags
-			calls = namespaceparser.findall(module,'./','rpc')
-			for rpc in calls:
+			for rpc in namespaceparser.findall(module, './', 'rpc'):
 				# Extract name and description
 				rpc_name = rpc.attrib['name']
 				rpc_description = namespaceparser.find(namespaceparser.find(rpc, './', 'description'), './', 'text').text
@@ -233,20 +240,48 @@ def get_schema(m, *args, **kwargs):
 				param_name = []
 				param_type_name = []
 				parameters = []
-				leaf_list = namespaceparser.find(rpc, './', 'input')
 				# Parse child <leaf> tags of <input>
-				for leaf in leaf_list:
+				for leaf in namespaceparser.find(rpc, './', 'input'):
 					# uuidInput is standard, we are only interested in the other input parameters
 					if(leaf.attrib['name'] != "uuidInput"):
-						# Extract <leaf name="..."> attribute
-						param_name.append(leaf.attrib['name'])
-						# Extract all <type name="..."/> tags into param_type_name
-						list_param_type = namespaceparser.findall(leaf, './', 'type')
-						for param_type in list_param_type:
-							param_type_name.append(param_type.attrib['name'])
-						# Extract first <type name="..."/> tag into parameters
-						for parameter in namespaceparser.find(leaf, './', 'type'):
-							parameters.append(parameter.attrib['name'])
+						for param_type in namespaceparser.findall(leaf, './', 'type'):
+							param_type_name = param_type.attrib['name']
+							param_name = leaf.attrib['name']
+
+						if len(namespaceparser.find(leaf, './', 'type')) != 0:
+							# type is not None
+							if namespaceparser.find(leaf, './', 'type').attrib['name'] == 'union':
+								# e.g. RGB input for LED
+								for parameter in namespaceparser.find(leaf, './', 'type'):
+									value_range = namespaceparser.find(parameter, './', 'range').attrib['value'].split("..")
+									parameters.append([parameter.attrib['name'], value_range])
+							elif namespaceparser.find(leaf, './', 'type').attrib['name'] == 'enumeration':
+								# e.g. event/automation CRUD operators
+								enums = []
+								for enum in namespaceparser.findall(param_type, './', 'enum'):
+									option = enum.attrib['name']
+									enums.append(option)
+								parameters.append([leaf.attrib['name'], enums])
+							elif namespaceparser.find(leaf, './', 'type').attrib['name'] == 'int':
+								for element in namespaceparser.findall(leaf, './', 'type'):
+									value_range = namespaceparser.find(element, './', 'range').attrib['value'].split("..")
+									parameters.append([leaf.attrib['name'], namespaceparser.find(leaf, './', 'type').attrib['name'], value_range])
+						else:
+							# type is None, e.g. event configuration name, duration, interval
+							parameters.append([leaf.attrib['name'], namespaceparser.find(leaf, './', 'type').attrib['name']])
+
+						# # Extract <leaf name="..."> attribute
+						# param_name.append(leaf.attrib['name'])
+						# # Extract all <type name="..."/> tags into param_type_name
+						# list_param_type = namespaceparser.findall(leaf, './', 'type')
+						# for param_type in list_param_type:
+						# 	param_type_name.append(param_type.attrib['name'])
+						# # Extract first <type name="..."/> tag into parameters
+						# for parameter in namespaceparser.find(leaf, './', 'type'):
+						# 	try:
+						# 		parameters.append(parameter.attrib['name'])
+						# 	except KeyError:
+						# 		pass
 
 				# Extract topic from <default> tag
 				topic = None
@@ -273,7 +308,13 @@ def get_schema(m, *args, **kwargs):
 							# Extract name and MQTT topic (stored in <default>)
 							leaf_name0 = leaf.attrib['name']
 							default = namespaceparser.find(leaf, './', 'default')
-							sensors[leaf_name] = default.attrib['value']
+							if namespaceparser.findall(leaf, './', 'units') == []:
+								unit = ''
+							else:
+								unit = namespaceparser.findall(leaf, './', 'units')[0].attrib['name'].split(";")[1]
+								if (unit == "%%"):
+									unit = "%"
+							sensors[leaf_name] = [default.attrib['value'], unit]
 			
 			# Get all <namespace> tags
 			for namespace in namespaceparser.findall(module, './', 'namespace'):
@@ -298,7 +339,7 @@ def build_xml_rpc(thing, function, param_type, param_name, value):
 	child = etree.SubElement(xml_rpc, "uuidInput")
 	child.text = thing
 
-	if param_type == 'union':
+	if param_type == 'union' or param_type == 'enumeration':
 		parameters = value.split(";")
 		value = ""
 		del parameters[-1]
@@ -306,11 +347,29 @@ def build_xml_rpc(thing, function, param_type, param_name, value):
 			value = value + request.form[parameter] + ","
 		value = value[:-1]
 
+	# Generate value for automation functions (recognized by function name)
+	if "Auto" in function:
+			parameters = value.split(";")
+			value = ""
+			del parameters[-1]
+			for key, val in request.form.items():
+					if (key == 'command' and val.split(",")[1] !='union'):
+							# drop 'union' field
+							value = value + val.split(",")[0] + ","
+							break
+					elif (key == 'command' and val.split(",")[1] == 'union'):
+							# parameters are separated by comma (board behavior), however,
+							# RGB inputs are also separated by comma, change to ':'
+							value = value + val.split(",")[0] + ":"
+					elif ("input" in key and "input_" not in key):
+							value = value + val + ":"
+					else:
+							value = value + val + ","
+			value = value[:-1]
+
 	if value != None:
 		child = etree.SubElement(xml_rpc, param_name)
 		child.text = value
-	else:
-		value = ""
 
 def send_rpcs(xml_rpcs):
 	"""

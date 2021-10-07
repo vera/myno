@@ -1,5 +1,6 @@
 var notificationDiv = document.getElementById('notification');
 var errorDiv = document.getElementById('error');
+var eventDiv = document.getElementById('events');
 
 document.addEventListener("DOMContentLoaded", function() { 
 	getDivs();
@@ -9,6 +10,7 @@ document.addEventListener("DOMContentLoaded", function() {
 function getDivs() {
 	notificationDiv = document.getElementById('notification');
 	errorDiv = document.getElementById('error');
+	eventDiv = document.getElementById('events');
 }
 
 function updateValues() {
@@ -34,8 +36,20 @@ function updateUI(data) {
 	// Update sensor values
 	for (let key in data.sensors) {
 		let value = data.sensors[key];
-		var element = document.getElementById(key);
-		if (element) element.innerText = value[1] + " (" + value[0] + ")";
+		var dataElement = document.getElementById(key + "-value");
+		if (dataElement) {
+			dataElement.innerText = value[1];
+			if (key.includes("event")) {
+				if (value[1] != "") {
+					dataElement.parentElement.className = 'sensor-event-triggered';
+				}
+				else {
+					dataElement.parentElement.className = 'sensor-event-clear';
+				}
+			}
+		}
+		var timestampElement = document.getElementById(key + "-timestamp");
+		if (timestampElement) timestampElement.innerText = " (" + value[0] + ")";
 	}
 
 	// Update nonce values
@@ -67,6 +81,23 @@ function updateUI(data) {
 		}
 	else {
 		fadeOut(notificationDiv, 1000);
+	}
+
+	if (data.events != ""){
+    eventDiv.innerHTML = data.events;
+    fadeIn(eventDiv, 1000);
+	}
+	else {
+		fadeOut(eventDiv, 1000);
+	}
+
+	if(document.getElementById('autom_rpc')) {
+		document.getElementById('autom_rpc').addEventListener('change', function () {
+			var style = this.value.split(",")[1] == 'union' ? 'block' : 'none';
+			for (i = 0; i < document.getElementsByClassName('hidden_rpc').length; i++) {
+				document.getElementsByClassName('hidden_rpc')[i].style.display = style;
+			}
+		});
 	}
 }
 

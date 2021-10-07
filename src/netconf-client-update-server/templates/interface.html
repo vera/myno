@@ -20,24 +20,26 @@
 	<hr>
 
 	<div class='notification' id='notification'></div>
-	<br>
+	<div class='events' id='events'></div>
 	<div class='error' id='error'></div>
 
 	<hr>
 
 	{% if device_dict.items() %}
-		{% for device_id, device_data in device_dict.items() %}
+		{% for device_id, device_data in device_dict.items()|sort %}
 			<br>
 			<p class="thing">{{ device_data[0] }}</p>
 			<p class="uuid">{{ device_id }}</p>
 			<br>
 			{% if device_data[1]['rpcs'] %}
-				{% for key, value in device_data[1]['rpcs'].items() %}
-					{% if value[2] == 'union' %}
-						<!--
+				{% for key, value in device_data[1]['rpcs'].items()|sort %}
+					{% if value[2] == 'union' and 'Conf' not in key %} <!-- TODO Parameter form -->
+						<!-- Kristinas/Michaels Version:
+
 						thing, name, description, param_name, param_type_name, parameters
 						=
 						device_uuid, key, value[0],value[1],value[2], value[3]
+
 						parameter_entries = ""
 						parameters.sort(reverse=True)
 						for parameter in parameters:
@@ -51,7 +53,178 @@
 						content = content + "</fieldset></form></div>"
 						return content;
 						-->
-					{% elif value[1] is sequence and value[1]|length >= 1 %}
+						<!-- Florians Version: -->
+						<ul id='btnparameter' class='dropdown_parent'>
+							<button class='device_parameter_button' title='{{ value[0] }}'>{{ key.replace("func","") }} ▾</button>
+							<ul class='dropdown_child_parameter'>
+								<form class='form-inline' method='POST'>
+									<div class='dropdown-configuration'>
+										{% for parameter in value[3] %}
+											<li>
+												<p>
+													<label class="h2">{{ parameter[0].replace("input","") }}:</label>
+													<input type='number' id="{{ parameter[0] }}" name ="{{ parameter[0] }}"
+													       min='{{ parameter[1][0] }}' max='{{ parameter[1][1] }}'
+																 value='{{ parameter[1][1] }}' required></input>
+												</p>
+											</li>
+										{% endfor %}
+										<p>
+											<li>
+												<button type="submit" class="button device_submit_button" formaction="/function_call/{{ device_id }}/{{ key }}/{{ value[2] }}/{{ value[1] }}/{{ value[3]|map(attribute='0')|join(';') }}">submit</button>
+											</li>
+										</p>
+									</div>
+								</form>
+							</ul>
+						</ul>
+					{% elif value[2] == 'enumeration' and 'Conf' in key %} <!-- Event form -->
+						<ul id="btnconfiguration" class="dropdown_parent">
+							<button class="device_configuration_button" title="{{ value[0] }}">
+								{{ key.replace("func", "") }} ▾
+							</button>
+							<ul class="dropdown_child_config">
+								<form class="form-inline" method="POST">
+									<div class="dropdown-configuration">
+										{% for parameter in value[3] %}
+											{% if parameter[1] == 'int' and parameter|length > 2 and parameter[2] is sequence %} <!-- int with min and max -->
+											<li>
+												<p>
+													<label class="h2">{{ parameter[0].replace("input_","") }}:</label>
+													<input type='number' id="{{ parameter[0] }}"
+													       name ="{{ parameter[0] }}" min="{{ parameter[2][0] }}"
+																 max=" {{ parameter[2][1] }}" step="0.1"
+																 value="1" required></input>
+												</p>
+											</li>
+											{% elif parameter[1] == 'int' %} <!-- int without min and max -->
+												<li>
+													<label class="h2">{{ parameter[0].replace("input_", "") }}:</label>
+													<input type='number' id="{{ parameter[0] }}"
+													       name ="{{ parameter[0] }}" min='1' max='1000' value = '1' required></input>
+												</li>
+											{% elif parameter[1] == 'float' %} <!-- float, e.g. threshold -->
+												<li>
+													<p>
+														<label class="h2">{{ parameter[0].replace("input_","") }}:</label>
+														<input type='number' id="{{ parameter[0] }}"
+														name="{{ parameter[0] }}" min='-100' max='100' value = '0' required step="0.1"></input>
+													</p>
+												</li>
+											{% elif parameter[1] == 'string' %} <!-- string, e.g. name, maxed at 15 characters -->
+												<li>
+													<p>
+														<label class="h2">{{ parameter[0].replace("input_","") }}:</label>
+														<input type='text' id="{{ parameter[0] }}"
+														       name ="{{ parameter[0] }}" maxlength='15' size='15' required value='Default' placeholder='EventName'></input>
+													</p>
+												</li>
+											{% elif parameter[1] is sequence %} <!-- list to select from, e.g. CRUD -->
+												<li>
+													<label class="h2">{{ parameter[0].replace("input_","") }}:</label>
+													<select onfocus="this.size=3;" onblur="this.size=1;"
+													        onchange="this.size=1; this.blur();" name="{{ parameter[0] }}">
+														{% for item in parameter[1]|sort %}
+															<option>{{ item }}</option>
+														{% endfor %}
+													</select>
+												</li>
+											{% endif %}
+										{% endfor %}
+										<li>
+											<p>
+												<button type='submit' class='button device_submit_button'
+												        formaction="/function_call/{{ device_id }}/{{ key }}/{{ value[2] }}/{{ value[1] }}/{{ value[3]|map(attribute='0')|join(';') }}">
+													submit
+												</button>
+											</p>
+										</li>
+									</div>
+								</form>
+							</ul>
+						</ul>
+					{% elif value[2] and "Auto" in key %} <!-- TODO Automation form -->
+						<!-- TODO evdict: matching Conf function, all functions not containing Auto -->
+						{% set confFunction = device_data[1]['rpcs'][key.replace("Auto","Conf",1)] %}
+						{% set rpcdict = device_data[1]['rpcs'].items()|reject("isAutoOrConfFunction")|list %}
+						<ul id='btnconfiguration' class='dropdown_parent'>
+							<button class='device_configuration_button' title='{{ value[0] }}'>{{ key.replace("func","") }} ▾</button>
+							<ul class='dropdown_child_config'>
+								<form class='form-inline' method='POST'>
+									<div class ='dropdown-configuration'></div>
+									<div id="{{ key.replace('Auto', 'Conf', 1) }}">
+										{% for parameter in confFunction[3] %}
+											{% if parameter[1] == 'int' and parameter|length > 2 and parameter[2] is sequence %}
+												<li>
+													<p>
+														<label class="h2">{{ parameter[0].replace("input_", "") }}:</label>
+														<input type='number' id="{{ parameter[0] }}" name ="{{ parameter[0] }}"
+																	min='{{ parameter[2][0] }}' max='{{ parameter[2][1] }}'
+																	step="0.1" value='1' required></input>
+													</p>
+												</li>
+											{% elif parameter[1] == 'int' %}
+												<li>
+													<label class="h2">{{ parameter[0].replace("input_","") }}:</label>
+													<input type='number' id="{{ parameter[0] }}" name ="{{ parameter[0] }}"
+																min='1' max='1000' value='1' required></input>
+												</li>
+											{% elif parameter[1] == 'float' %}
+												<li>
+													<p>
+														<label class="h2">{{ parameter[0].replace("input_","") }}:</label>
+														<input type='number' id="{{ str(parameter[0]) }}" name ="{{ parameter[0] }}"
+																	min='-100' max='100' value='0' required step='0.1'></input>
+													</p>
+												</li>
+											{% elif parameter[1] == 'string' %}
+												<li>
+													<p>
+														<label class="h2">{{ parameter[0].replace("input_","") }}:</label>
+														<input type='text' id="{{ parameter[0] }}" name ="{{ parameter[0] }}"
+																	maxlength='16' size='16' required value='Default' placeholder='Eventname'></input>
+													</p>
+												</li>
+											{% elif parameter[1] is sequence %}
+												<li>
+													<label class="h2">{{ parameter[0].replace("input_","") }}:</label>
+													<select name="{{ parameter[0] }}">
+														{% for item in parameter[1]|sort %}
+															<option>{{ item }}</option>
+														{% endfor %}
+													</select>
+												</li>
+											{% endif %}
+										{% endfor %}
+									</div>
+									<div class="selector">
+										<li>
+											<select name='command' onfocus='this.size=3;' onblur='this.size=1;' onchange='this.size=1; this.blur();' id="autom_rpc" required>
+												<option selected disabled>Actuator Command</option>
+													{% for rpc in rpcdict|sort %}
+														<option value="{{ rpc[0] }},{{ rpc[1][2] }}">{{ rpc[0] }}</option>
+													{% endfor %}
+											</select>
+											{% for rpc in rpcdict|sort %}
+												{% if rpc[1][2] == 'union' %}
+													<li><div class='hidden_rpc' style='display: none;'>
+														{% for item in rpc[1][3]|sort(reverse=True) %}
+															{{ item[0] }}: <input type='number' name="{{ item[0] }}" min='{{ item[1][0] }}'
+																										max='{{ item[1][1] }}' value='{{ item[1][1] }}' required></input>
+														{% endfor %}
+													</div></li>
+												{% endif %}
+											{% endfor %}
+										</li>
+									</div>
+									<li>
+										<input type='submit' class='button device_submit_button' value='submit'
+													formaction="/function_call/{{ device_id }}/{{ key }}/{{ value[2] }}/{{ value[1] }}/{{ value[3]|map(attribute='0')|join(';') }}"></input>
+									</li>
+								</form>
+							</ul>
+						</ul>
+					{% elif value[1] is sequence and value[1]|length >= 1 %} <!-- Update manifest and image form -->
 						<div class='form_function' id="{{ key }}">
 							<form action="/function_call/{{ device_id }}/{{ key }}" method="POST" enctype="multipart/form-data">
 								<fieldset>
@@ -78,7 +251,7 @@
 								</fieldset>
 							</form>
 						</div>
-					{% elif value[2] %}
+					{% elif value[2] %} <!-- Parameter button -->
 						<!--
 						thing, name, description, param_name, param_type_name, parameters
 						=
@@ -92,15 +265,31 @@
 						content = " <div class='dropdown' onclick=''> <span>" + name + " ▾</span> <div class='dropdown-content'>"
 						return content + parameter_entries + "</div></div>"
 						-->
-					{% else %}
-						<a href="/function_call/{{ device_id }}/{{ key }}" class='button device_function_button' title="{{ value[0] }}">{{ key }}</a>
+					{% else %} <!-- Function button -->
+						<a href="/function_call/{{ device_id }}/{{ key }}" class='button device_function_button' title="{{ value[0] }}">{{ key.replace("func","") }}</a>
 					{% endif %}
 				{% endfor %}
 			{% endif %}
+
 			{% if device_data[1]['sensors'] %}
 				<br>
-				{% for key, value in device_data[1]['sensors'].items() %}
-					<div class='sensor'>{{ key }} &nbsp; <p id="{{ value }}">&nbsp; &nbsp;</p></div>
+				{% for key, value in device_data[1]['sensors'].items()|sort %}
+					{% if 'Ev' in key %} <!-- sensor event -->
+						<!-- {{ key }}: -->
+						<div class='sensor-event-clear'>
+							<p>{{ key.replace("func","") }}</p>
+							<span id='{{ value[0] }}' style="text-align:left;">&nbsp;&nbsp;</span>
+							{{ value[1] }}
+						</div>
+					{% else %}
+						<!-- {{ key }}: -->
+						<div class='sensor'>
+							<p>{{ key.replace("funcGet", "") }}</p>
+							<span id="{{ value[0] }}-value">n/a</span>
+							{{ value[1] }}
+							<span id="{{ value[0] }}-timestamp" class="sensor-timestamp"></span>
+						</div>
+					{% endif %}
 				{% endfor %}
 			{% endif %}
 		{% endfor %}
