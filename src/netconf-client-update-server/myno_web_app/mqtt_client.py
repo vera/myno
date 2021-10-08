@@ -9,7 +9,7 @@ from . import update_server
 
 mqtt = Mqtt()
 
-sensor_dict = {}
+_sensor_dict = {}
 
 def async_init(app):
 	mqtt_thread = threading.Thread(target=init, args=[app])
@@ -26,7 +26,7 @@ def init(app):
 
 	@mqtt.on_message()
 	def handle_mqtt_message(client, userdata, message):
-		global sensor_dict
+		global _sensor_dict
 
 		logging.info("Received message '" + str(message.payload.decode()) + "' on topic '" + message.topic + "'")
 
@@ -39,7 +39,12 @@ def init(app):
 				config.unacked_slices[message.topic].remove(int(payload[0]))
 				logging.info("Received ACK for slice " + payload[0])
 		else:
-			sensor_dict[message.topic] = (datetime.datetime.now().strftime('%d.%m.%Y %H:%M:%S'), message.payload.decode())
+			_sensor_dict[message.topic] = (datetime.datetime.now(), message.payload.decode())
+
+def get_sensor_dict():
+	# Prettify timestamps
+	temp = { k : (lambda x: (x[0].strftime(config.TIMESTAMP_FORMAT), x[1]))(v) for k, v in _sensor_dict.items() }
+	return temp
 
 def subscribe(*args):
 	"""Passes through args to subscribe method."""

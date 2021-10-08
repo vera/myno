@@ -38,14 +38,18 @@ function updateUI(data) {
 		let value = data.sensors[key];
 		var dataElement = document.getElementById(key + "-value");
 		if (dataElement) {
-			dataElement.innerText = value[1];
 			if (key.includes("event")) {
 				if (value[1] != "") {
+					dataElement.innerText = value[1];
+					dataElement.className = '';
 					dataElement.parentElement.className = 'sensor-event-triggered';
 				}
 				else {
+					dataElement.className = 'sensor-event-old';
 					dataElement.parentElement.className = 'sensor-event-clear';
 				}
+			} else {
+				dataElement.innerText = value[1];
 			}
 		}
 		var timestampElement = document.getElementById(key + "-timestamp");
@@ -81,14 +85,6 @@ function updateUI(data) {
 		}
 	else {
 		fadeOut(notificationDiv, 1000);
-	}
-
-	if (data.events != ""){
-    eventDiv.innerHTML = data.events;
-    fadeIn(eventDiv, 1000);
-	}
-	else {
-		fadeOut(eventDiv, 1000);
 	}
 
 	if(document.getElementById('autom_rpc')) {

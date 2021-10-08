@@ -27,7 +27,7 @@ def create_app():
 		reload_event.set()
 
 		return render_template(config.html_template_file,
-													device_dict=netconf_client.device_dict)
+													 device_dict=netconf_client.get_device_dict())
 
 	@app.route('/ajax', methods=['GET'])
 	def ajax():
@@ -36,26 +36,25 @@ def create_app():
 		"""
 		return jsonify(error=notifications.get_errors(),
 									notification=notifications.get_info(),
-									events=notifications.get_events(),
-									sensors=mqtt_client.sensor_dict,
+									sensors=mqtt_client.get_sensor_dict(),
 									nonce=netconf_client.nonce_dict)
 
 	@app.route('/function_call/<thing>/<function>', defaults={'param_type' : None,'param_name': None, 'value': None}, methods=['GET', 'POST'])
 	@app.route('/function_call/<thing>/<function>/<param_name>', methods=['GET', 'POST']) # ?
-	@app.route('/function_call/<thing>/<function>/<param_type>/<param_name>/<value>', methods=['GET', 'POST']) # ?
+	@app.route('/function_call/<thing>/<function>/<param_type>/<param_name>/<value>', methods=['GET', 'POST'])
 	def function_click(thing, function, param_type, param_name, value):
 		"""
 		Handles RPC button clicks.
 		"""
 		if function == "funcPubUpdateImage":
 			xml_rpcs = update_server.publish_image(thing, function,
-																						netconf_client.device_dict[thing][1]['rpcs']['funcPubUpdateImage'][4] + '/' + thing,
+																						netconf_client.get_device_dict()[thing][1]['rpcs']['funcPubUpdateImage'][4] + '/' + thing,
 																						request.files["inputUpdateImage"])
 		elif function == "funcPubUpdateManifest":
 			xml_rpcs = update_server.build_manifest_rpcs(thing, function,
 																									sorted(request.form.items()))
 		else:
-			xml_rpcs = netconf_client.build_xml_rpc(thing, function, param_type, param_name, value)
+			xml_rpcs = netconf_client.build_xml_rpc(thing, function, param_type, param_name, value, request.form.items())
 		
 		# Send RPC(s) in new thread so we don't block the main thread
 		if isinstance(xml_rpcs, list):

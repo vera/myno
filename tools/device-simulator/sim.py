@@ -31,6 +31,7 @@ UPDATE_TOPIC = 'yang/update/+/' + DEVICE_UUID
 CMD_TOPIC = 'led/' + DEVICE_UUID
 #SENSOR_TOPIC = 'sensor/moisture/' + DEVICE_UUID
 SENSOR_TOPIC = 'sensor/moisture/moisture_1/' + DEVICE_UUID
+EVENT_TOPIC = 'event/sensor/moisture/moisture_1/' + DEVICE_UUID
 RESPONSE_TOPIC = 'response/' + DEVICE_UUID
 
 deviceAppID = "APP"
@@ -208,9 +209,13 @@ def mqtt_message(mqtt_client, userdata, msg):
 
 
 def sensor_loop():
-    # print(UPDATE_TOPIC+DEVICE_UUID)
     while True:
-        mqtt_client.publish(SENSOR_TOPIC, random.randint(0,1000))
+        sensor_reading = random.randint(0,100)
+        if sensor_reading <= 50:
+            mqtt_client.publish(EVENT_TOPIC, "Event: Default. {:.2f} <= 50.00. funcPump_1On".format(sensor_reading))
+        else:
+            mqtt_client.publish(EVENT_TOPIC, "")
+        mqtt_client.publish(SENSOR_TOPIC, sensor_reading)
         time.sleep(5)
 
 
@@ -232,6 +237,7 @@ if __name__ == "__main__":
         print("Ontology published")
 
     sensor_handler = threading.Thread(target=sensor_loop)
+    sensor_handler.daemon = True
     sensor_handler.start()
 
     run = True

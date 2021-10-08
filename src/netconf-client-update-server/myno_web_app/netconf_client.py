@@ -13,7 +13,7 @@ from . import notifications
 from . import namespaceparser
 from . import mqtt_client
 
-device_dict = {}
+_device_dict = {}
 netconf_manager = None
 nonce_dict={}
 global_rpc_lock = threading.Lock()
@@ -51,16 +51,20 @@ def init(reload_event):
 		notifications.add_error('Error in netconf_client.init().')
 		logging.exception("netconf_client.init(): Error. Something else not caught by socket_error.")
 
-def _get_devices():
-	global device_dict
+def get_device_dict():
+	global _device_dict
+	return _device_dict
 
-	device_dict = get_devices()
+def _get_devices():
+	global _device_dict
+
+	_device_dict = get_devices()
 
 	# Subscribe to sensor topics
-	for device_id, device_data in device_dict.items():
-		if not device_dict[device_id][1] or not device_dict[device_id][1]['sensors']:
+	for device_id, device_data in _device_dict.items():
+		if not _device_dict[device_id][1] or not _device_dict[device_id][1]['sensors']:
 			continue
-		for topic, _ in device_dict[device_id][1]['sensors'].values():
+		for topic, _ in _device_dict[device_id][1]['sensors'].values():
 			mqtt_client.subscribe(topic)
 
 def get_devices():
@@ -327,7 +331,7 @@ def get_schema(m):
 
 	return modules
 
-def build_xml_rpc(thing, function, param_type, param_name, value):
+def build_xml_rpc(thing, function, param_type, param_name, value, form_items):
 	"""Builds XML RPCs.
 
 	Example:
@@ -355,7 +359,7 @@ def build_xml_rpc(thing, function, param_type, param_name, value):
 			parameters = value.split(";")
 			value = ""
 			del parameters[-1]
-			for key, val in request.form.items():
+			for key, val in form_items:
 					if (key == 'command' and val.split(",")[1] !='union'):
 							# drop 'union' field
 							value = value + val.split(",")[0] + ","
@@ -374,6 +378,8 @@ def build_xml_rpc(thing, function, param_type, param_name, value):
 		child = etree.SubElement(xml_rpc, param_name)
 		child.text = value
 
+	return xml_rpc
+
 def send_rpcs(xml_rpcs):
 	"""
 	Sends multiple RPCs and extracts return value from final response.
@@ -381,7 +387,7 @@ def send_rpcs(xml_rpcs):
 	try:
 		for xml_rpc in xml_rpcs:
 			# Send RPC
-			rpc_reply = m.dispatch(xml_rpc)
+			rpc_reply = netconf_manager.dispatch(xml_rpc)
 			logging.debug("Received RPC reply: " + str(rpc_reply))
 
 			# All RPC replies except for the final RPC are discarded
@@ -396,11 +402,11 @@ def send_rpc(xml_rpc):
 	Sends a single RPC and extracts return value from response.
 	"""
 	try:
-		rpc_reply = netconf_client.netconf_manager.dispatch(xml_rpc)
+		rpc_reply = netconf_manager.dispatch(xml_rpc)
 		logging.debug("Received RPC reply: " + str(rpc_reply))
 
 		_handle_rpc_reply(str(rpc_reply))
-	except Exception as e:
+	except Exception:
 		notifications.add_error("RPC failed. NETCONF connection still active?")
 		logging.exception("RPC failed")
 
@@ -417,6 +423,9 @@ def _rpc_retval_to_notification(retval):
 
 def _handle_rpc_reply(rpc_reply):
 	global nonce_dict
+
+	if rpc_reply == None:
+		return
 
 	rpc_reply_xml_root = ET.fromstring(rpc_reply)
 	for data_node in rpc_reply_xml_root.findall('./data'):

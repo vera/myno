@@ -124,6 +124,10 @@ fieldset {
 	-webkit-font-smoothing: antialiased;
 }
 
+.sensor-event-old {
+	color: #555555;
+}
+
 .events {
 	color: black;
 	background-color: #f7e460;

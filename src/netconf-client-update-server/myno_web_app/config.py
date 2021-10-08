@@ -4,6 +4,12 @@ Silencing werkzeug logs
 SUPPRESS_WERKZEUG_LOGS = True
 
 """
+UI parameters
+"""
+TIMESTAMP_FORMAT = '%d.%m.%Y %H:%M:%S'
+NOTIFICATIONS_FADEOUT_TIME = 15 # seconds
+
+"""
 Flask config parameters
 """
 html_template_file = 'interface.html'

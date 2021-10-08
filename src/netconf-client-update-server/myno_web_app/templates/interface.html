@@ -20,7 +20,6 @@
 	<hr>
 
 	<div class='notification' id='notification'></div>
-	<div class='events' id='events'></div>
 	<div class='error' id='error'></div>
 
 	<hr>
@@ -144,7 +143,6 @@
 							</ul>
 						</ul>
 					{% elif value[2] and "Auto" in key %} <!-- TODO Automation form -->
-						<!-- TODO evdict: matching Conf function, all functions not containing Auto -->
 						{% set confFunction = device_data[1]['rpcs'][key.replace("Auto","Conf",1)] %}
 						{% set rpcdict = device_data[1]['rpcs'].items()|reject("isAutoOrConfFunction")|list %}
 						<ul id='btnconfiguration' class='dropdown_parent'>
@@ -278,8 +276,9 @@
 						<!-- {{ key }}: -->
 						<div class='sensor-event-clear'>
 							<p>{{ key.replace("func","") }}</p>
-							<span id='{{ value[0] }}' style="text-align:left;">&nbsp;&nbsp;</span>
+							<span id="{{ value[0] }}-value">n/a</span>
 							{{ value[1] }}
+							<span id="{{ value[0] }}-timestamp" class="sensor-timestamp"></span>
 						</div>
 					{% else %}
 						<!-- {{ key }}: -->
