@@ -21,7 +21,7 @@ def client(mocker):
   mocker.patch('myno_web_app.netconf_client.get_device_dict', return_value={})
 
   mocker_config = { 'dispatch.return_value': None }
-  mock_nc_manager  = mocker.patch('myno_web_app.netconf_client.netconf_manager', **mocker_config)
+  mock_nc_manager  = mocker.patch('myno_web_app.netconf_client._netconf_manager', **mocker_config)
 
   app = create_app()
   yield app.test_client()

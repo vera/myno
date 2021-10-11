@@ -14,7 +14,7 @@ from . import namespaceparser
 from . import mqtt_client
 
 _device_dict = {}
-netconf_manager = None
+_netconf_manager = None
 nonce_dict={}
 global_rpc_lock = threading.Lock()
 topics=[]
@@ -25,11 +25,11 @@ def async_init(reload_event):
 	netconf_client_thread.start()
 
 def init(reload_event):
-	global netconf_manager
+	global _netconf_manager
 
 	try:
 		# Connect to NETCONF server via manager
-		netconf_manager = manager.connect_ssh(config.NETCONF_IP,
+		_netconf_manager = manager.connect_ssh(config.NETCONF_IP,
 																					port=config.NETCONF_PORT,
 																					username=config.NETCONF_USERNAME,
 																					password=config.NETCONF_PASSWORD,
@@ -86,9 +86,9 @@ def get_devices():
 
 	try:
 		# Get device dictionary
-		devices = get(netconf_manager)
+		devices = get()
 		# Get RPC + sensor dictionary
-		scheme_dict = get_schema(netconf_manager)
+		scheme_dict = get_schema()
 
 		for key, value in devices.items():
 			res[key] = (value[0], scheme_dict[value[1]])
@@ -101,7 +101,7 @@ def get_devices():
 
 	return res
 
-def get(m):
+def get():
 	"""Sends <get> RPC to NETCONF server and parses XML response into device dictionary.
 	Device dictionary entries are structured like: { device_id : (device_category, device_namespace) }
 
@@ -123,7 +123,7 @@ def get(m):
 	devices = {}
 
 	# Make GET RPC
-	get_string = str(m.get())
+	get_string = str(_netconf_manager.get())
 
 	# Parse XML into tree representation
 	tree = ET.fromstring(get_string)
@@ -155,7 +155,7 @@ def get(m):
 
 	return devices
 
-def get_schema(m):
+def get_schema():
 	"""Sends <get-schema> RPC to NETCONF server and parses XML response into dictionary.
 	Dictionary entries are structured like:
 	{ rpcs: { rpc_name = (rpc_description, param_name, param_type_name, parameters) },
@@ -196,8 +196,7 @@ def get_schema(m):
 	modules = {}
 
 	# Make get-schema RPC (with empty identifier)
-	get_schema_string = (str(m.get_schema('')))
-	print(get_schema_string)
+	get_schema_string = (str(_netconf_manager.get_schema('')))
 
 	# Parse XML into tree representation
 	root = ET.fromstring(get_schema_string)
@@ -387,7 +386,7 @@ def send_rpcs(xml_rpcs):
 	try:
 		for xml_rpc in xml_rpcs:
 			# Send RPC
-			rpc_reply = netconf_manager.dispatch(xml_rpc)
+			rpc_reply = _netconf_manager.dispatch(xml_rpc)
 			logging.debug("Received RPC reply: " + str(rpc_reply))
 
 			# All RPC replies except for the final RPC are discarded
@@ -402,7 +401,7 @@ def send_rpc(xml_rpc):
 	Sends a single RPC and extracts return value from response.
 	"""
 	try:
-		rpc_reply = netconf_manager.dispatch(xml_rpc)
+		rpc_reply = _netconf_manager.dispatch(xml_rpc)
 		logging.debug("Received RPC reply: " + str(rpc_reply))
 
 		_handle_rpc_reply(str(rpc_reply))

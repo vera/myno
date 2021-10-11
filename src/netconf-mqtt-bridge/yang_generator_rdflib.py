@@ -965,7 +965,8 @@ def generate_yang(json_str):
         createReferences(i['properties'], propList)
 
     for i in opStateList:
-        createReferences(i['properties'], propList)
+        if 'properties' in i:
+            createReferences(i['properties'], propList)
 
     for i in cmdList:
         createReferences(i['inputs'], inputList)
