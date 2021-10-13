@@ -10,3 +10,5 @@ __pycache__
 src/netconf-mqtt-bridge/yang
 
 createSig
+
+bin/

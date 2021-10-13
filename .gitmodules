@@ -1,0 +1,3 @@
+[submodule "src/iot-firmware/nrf52840dk-co2/RIOT"]
+	path = src/iot-firmware/nrf52840dk-co2/RIOT
+	url = https://github.com/vera/RIOT
