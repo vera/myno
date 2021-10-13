@@ -1,8 +1,9 @@
 import pytest
+import time
 
 from lxml.etree import tostring
 
-from myno_web_app import create_app
+from myno_web_app import create_app, notifications
 from tests.device_dicts import *
 
 mock_nc_manager = None
@@ -13,6 +14,10 @@ device_cat = None
 Fixtures
 """
 
+@pytest.fixture(autouse=True)
+def reset_notifications():
+  notifications.reset()
+
 @pytest.fixture
 def client(mocker):
   global mock_nc_manager
@@ -20,8 +25,8 @@ def client(mocker):
   mocker.patch('myno_web_app.netconf_client.async_init')
   mocker.patch('myno_web_app.netconf_client.get_device_dict', return_value={})
 
-  mocker_config = { 'dispatch.return_value': None }
-  mock_nc_manager  = mocker.patch('myno_web_app.netconf_client._netconf_manager', **mocker_config)
+  mocker_config = { 'dispatch.return_value': '<?xml version="1.0" encoding="UTF-8"?><nc:rpc-reply xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0" message-id="urn:uuid:2050cd5b-f14d-bd3d-f791-cd95ed99"><data><retval>OK</retval></data></nc:rpc-reply>' }
+  mock_nc_manager = mocker.patch('myno_web_app.netconf_client._netconf_manager', **mocker_config)
 
   app = create_app()
   yield app.test_client()
@@ -72,7 +77,7 @@ def test_root_displays_pa_board(client, with_precision_agriculture_setup):
 GET /function_call/<device_id>/<function_name>
 """
 
-def test_toggle_rpc_for_pa_board(client, with_precision_agriculture_setup):
+def test_toggle_rpc_for_pa_board_dispatch(client, with_precision_agriculture_setup):
   """
   Check that GET request for a toggle function results in the correct XML RPC being dispatched
   """
@@ -80,8 +85,25 @@ def test_toggle_rpc_for_pa_board(client, with_precision_agriculture_setup):
   res = client.get('/function_call/' + device_id + '/' + toggle_func)
 
   mock_nc_manager.dispatch.assert_called_once()
-  xml_rpc = tostring(mock_nc_manager.dispatch.call_args.args[0]).decode("utf-8") 
+  xml_rpc = tostring(mock_nc_manager.dispatch.call_args.args[0]).decode("utf-8")
   assert xml_rpc == '<' + toggle_func + '><uuidInput>' + device_id + '</uuidInput></' + toggle_func + '>'
+
+def test_toggle_rpc_for_pa_board_handle_reply(client, with_precision_agriculture_setup):
+  """
+  Check that GET request for a toggle function results in the correct XML RPC being dispatched
+  """
+  toggle_func = 'funcLed_1Off'
+  res = client.get('/function_call/' + device_id + '/' + toggle_func)
+
+  # Wait for the netconf_client thread to finish handling RPC reply
+  # TODO This should be done more cleanly...
+  time.sleep(1)
+
+  info_notifications = notifications.get_info()
+  assert len(info_notifications) == 2
+  assert len(list(filter(lambda x: x[1] == 'Sent RPC to ' + device_id + ': ' + toggle_func, info_notifications))) == 1
+  assert len(list(filter(lambda x: x[1] == 'State has changed successfully (OK)', info_notifications))) == 1
+  assert len(notifications.get_errors()) == 0
 
 """
 POST /function_call/<device_id>/<function_name>/<param_type>/<param_name>/<param_value>

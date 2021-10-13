@@ -391,7 +391,7 @@ def send_rpcs(xml_rpcs):
 
 			# All RPC replies except for the final RPC are discarded
 			if xml_rpc == xml_rpcs[-1]:
-				_handle_rpc_reply(str(rpc_reply))
+				_handle_rpc_reply(str(rpc_reply), xml_rpc.tag)
 	except Exception as e:
 		notifications.add_error("RPC failed. NETCONF connection still active?")
 		logging.exception("RPC failed")
@@ -404,7 +404,7 @@ def send_rpc(xml_rpc):
 		rpc_reply = _netconf_manager.dispatch(xml_rpc)
 		logging.debug("Received RPC reply: " + str(rpc_reply))
 
-		_handle_rpc_reply(str(rpc_reply))
+		_handle_rpc_reply(rpc_reply, xml_rpc.tag)
 	except Exception:
 		notifications.add_error("RPC failed. NETCONF connection still active?")
 		logging.exception("RPC failed")
@@ -420,11 +420,19 @@ def _rpc_retval_to_notification(retval):
 		res = retval
 	return res
 
-def _handle_rpc_reply(rpc_reply):
-	global nonce_dict
+def _handle_rpc_reply(rpc_reply, xml_rpc_tag):
+	"""
+	Handles RPC reply.
 
-	if rpc_reply == None:
-		return
+	Example:
+	<?xml version="1.0" encoding="UTF-8"?><nc:rpc-reply xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0"
+	message-id="urn:uuid:2050cd5b-f14d-bd3d-f791-cd95ed99">
+		<data>
+			<retval>NOOP</retval>
+		</data>
+	</nc:rpc-reply>
+	"""
+	global nonce_dict
 
 	rpc_reply_xml_root = ET.fromstring(rpc_reply)
 	for data_node in rpc_reply_xml_root.findall('./data'):
@@ -432,7 +440,7 @@ def _handle_rpc_reply(rpc_reply):
 			# Display RPC reply
 			notifications.add_info(_rpc_retval_to_notification(retval_node.text))
 			# Extract nonce and old version from getDeviceToken reply
-			if xml_rpc.tag == "funcGetDeviceToken":
+			if xml_rpc_tag == "funcGetDeviceToken":
 				returnValues = retval_node.text.split(',')
 				nonce_dict["input_8_DeviceNonce"] = returnValues[0]
 				nonce_dict["input_6_OldVersion"] = returnValues[1]
