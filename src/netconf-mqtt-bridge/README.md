@@ -5,10 +5,13 @@
 Installiere die notwendigen Pakete für die NETCONF-Bridge: 
 
 ```
+sudo apt install lxml lxslt
 pip3 install -r requirements.txt
 ```
 
-Zusätzlich muss die Bibliothek `rdflib_jsonld.zip` aus dem Ordner tools installiert werden. Diese beinhaltet einen Bugfix und wird durch den netconf_server benötigt um den Namespace der Ontologie richtig zu parsen. 
+Zusätzlich muss die Bibliothek `rdflib_jsonld.zip` aus dem Ordner tools installiert werden. Diese beinhaltet einen Bugfix und wird durch den netconf_server benötigt um den Namespace der Ontologie richtig zu parsen.
+
+Die Bridge benötigt auch einen privaten RSA-Schlüssel, der in einer Datei namens `host.key` vorliegen muss.
 
 
 
