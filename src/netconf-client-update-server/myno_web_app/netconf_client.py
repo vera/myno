@@ -404,7 +404,7 @@ def send_rpc(xml_rpc):
 		rpc_reply = _netconf_manager.dispatch(xml_rpc)
 		logging.debug("Received RPC reply: " + str(rpc_reply))
 
-		_handle_rpc_reply(rpc_reply, xml_rpc.tag)
+		_handle_rpc_reply(str(rpc_reply), xml_rpc.tag)
 	except Exception:
 		notifications.add_error("RPC failed. NETCONF connection still active?")
 		logging.exception("RPC failed")

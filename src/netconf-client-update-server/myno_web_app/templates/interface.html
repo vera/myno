@@ -22,10 +22,10 @@
 	<div class='notification' id='notification'></div>
 	<div class='error' id='error'></div>
 
-	<hr>
-
 	{% if device_dict.items() %}
 		{% for device_id, device_data in device_dict.items()|sort %}
+			<br>
+			<hr>
 			<br>
 			<p class="thing">{{ device_data[0] }}</p>
 			<p class="uuid">{{ device_id }}</p>
@@ -293,6 +293,7 @@
 			{% endif %}
 		{% endfor %}
 	{% else %}
+	<hr>
 	<br>
 	<p class="uuid">No devices available, press "Get Devices" to refresh.</p>
 	{% endif %}
