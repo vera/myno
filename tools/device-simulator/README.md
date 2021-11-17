@@ -1,9 +1,16 @@
-#### Netconf-Simulator
+# Netconf-Simulator
 
-```
 Autor: Alexander Lindemann 
 Angepasst durch: Michael Nowak
+
+## Installation und Start
+
 ```
+pip3 install -r requirements.txt
+python3 sim.py
+```
+
+## Weitere Infos
 
 Das Python Skript publiziert die Ontologie im Ordner auf den hinterlegtem MQTT-Broker. 
 

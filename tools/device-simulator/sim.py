@@ -21,9 +21,8 @@ DEVICE_LINK_OFFSET = 1
 BROKER_ADDR = "localhost"
 BROKER_PORT = 1883
 
-# ONTOLOGY_FILE = "MYNO-Update-json.owl"
-# ONTOLOGY_FILE = "MYNO-Update-new-opt.owl"
-ONTOLOGY_FILE = "SensWOUnit.owl"
+# ONTOLOGY_FILE = "../../ontologies/myno-update-protocol/MYNO-Update-opt.owl"
+ONTOLOGY_FILE = "../../ontologies/precision-agriculture/SensWOUnit.owl"
 
 CONFIG_TOPIC = 'yang/config'
 WILDCARD = "/#"

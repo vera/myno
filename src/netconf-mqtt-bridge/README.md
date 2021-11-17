@@ -2,40 +2,62 @@
 
 ## Installation 
 
-Installiere die notwendigen Pakete für die NETCONF-Bridge: 
+1. Installiere die notwendigen Pakete für die NETCONF-Bridge: 
 
 ```
 sudo apt install lxml lxslt
+```
+
+   Weitere Hinweise zur Installation von `lxml`, auch für MAC OS, siehe: [https://lxml.de/installation.html](https://lxml.de/installation.html)
+
+2. Installiere die notwendigen Python-Pakete (da die Bridge und die Web-UI verschiedene Versionen benötigen, empfiehlt sich die Verwendung eines virtual environments für die Bridge):
+
+```
+python3 -m venv .venv
+source .venv/bin/activate
 pip3 install -r requirements.txt
 ```
 
-Zusätzlich muss die Bibliothek `rdflib_jsonld.zip` aus dem Ordner tools installiert werden. Diese beinhaltet einen Bugfix und wird durch den netconf_server benötigt um den Namespace der Ontologie richtig zu parsen.
+3. Zusätzlich muss die Bibliothek `rdflib_jsonld.zip` aus dem Ordner tools/ installiert werden. Die zum Zeitpunkt des Schreibens aktuelle Version von `rdflib_jsonld` ist 0.4.0. Die Version aus tools/ beinhaltet einen Bugfix, der von der Bridge benötigt wird, um den Namespace der Ontologie richtig zu parsen.
 
-Die Bridge benötigt auch einen privaten RSA-Schlüssel, der in einer Datei namens `host.key` vorliegen muss.
-
-
-
-Starten Sie mosquitto und dann den NETCONF-Client:
+   Wenn man ein virtual environment nutzt, befinden sich die Pakete unter: 
 
 ```
-mosquitto
+.venv/lib/python3.8/site-packages
+```
+
+   Hier kann einfach der Inhalt des Ordners mit dem Inhalt des gleichnamigen Ordners ausgetauscht werden.
+
+   Alternative Anleitungen hierzu: siehe [Python-Dokumentation](https://docs.python.org/3.3/install/index.html)
+
+4. Die Bridge benötigt einen privaten RSA-Schlüssel, der in einer Datei namens `host.key` vorliegen muss. Erzeugen Sie das Schlüsselpaar:
+
+```
+$ ssh-keygen -t rsa
+Generating public/private rsa key pair.
+Enter file in which to save the key (/home/vera/.ssh/id_rsa): host.key
+Enter passphrase (empty for no passphrase): 
+Enter same passphrase again: 
+Your identification has been saved in host.key
+Your public key has been saved in host.key.pub
+```
+
+5. Installieren Sie den MQTT-Broker `mosquitto` und starten Sie ihn:
+
+```
+sudo apt install mosquitto
+service mosquitto start
+```
+
+   Für MAC OS:
+
+```
+brew install mosquitto
+brew services start mosquitto
+```
+
+6. Starten Sie die NETCONF/MQTT-Bridge:
+
+```
 python3 netconf_server.py
 ```
-
-
-
-Die Bridge braucht eine modifizierte Version der [```rdflib_jsonld```](https://github.com/RDFLib/rdflib-jsonld). Die zum Zeitpunkt des schreibens aktuelle Version ist ```0.4.0```. Es ist jedoch ein Fix für das handling der json Dateien und die namespaces erforderlich. 
-
-Hierfür muss das Packet manuell aus  ```../tools/rdflib_jsonld.zip``` im eigenen Pfad installiert werden. 
-
-Anleitungen hierzu: 
-
-[Python Dokumentation](https://docs.python.org/3.3/install/index.html)
-
-Wenn man pycharm mit eigenem venv nutzt befinden sich die pakete meist unter: 
-
-```bash
-venv/lib/python3.8/site-packages
-```
-
-hier kann einfach der Inhalt des Ordners mit dem Inhalt des gleichnamigen Ordners ausgetauscht werden. Beim ausführen sollte aber nochmal sichergestellt werden das die richtige Libary genutzt wird.  
