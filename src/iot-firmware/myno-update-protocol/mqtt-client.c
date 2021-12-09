@@ -45,10 +45,7 @@
 #include "dev/leds.h"
 #include "os/sys/log.h"
 #include "mqtt-client.h"
-#include "cfs/cfs.h"
 #include <critical.h>
-#include "reg.h"
-#include "cpu.h"
 #include <stdbool.h>
 // Includes for ecc sign and verify
 #include "uECC.h"
@@ -61,6 +58,11 @@
 #include <stdarg.h>
 #include "lzss.h"
 #include "Keys.h"
+
+#define USE_CFS 0
+#if USE_CFS
+#include "cfs/cfs.h"
+#endif
 
 #define MANIFEST_SAVEFILE "savefile"
 #define REQID_SAVEFILE "reqFile"
@@ -384,7 +386,7 @@ echo_reply_handler(uip_ipaddr_t *source, uint8_t ttl, uint8_t *data,
                    uint16_t datalen)
 {
   if(uip_ip6addr_cmp(source, uip_ds6_defrt_choose())) {
-    def_rt_rssi = sicslowpan_get_last_rssi();
+    def_rt_rssi = (int16_t)uipbuf_get_attr(UIPBUF_ATTR_RSSI);
   }
 }
 /*---------------------------------------------------------------------------*/
@@ -643,6 +645,7 @@ void print_hex_string(uint8_t arr[], int len) {
   }
 }
 /*---------------------------------------------------------------------------*/
+#if USE_CFS
 /**
  * Writes to a file on disk.
  */
@@ -672,6 +675,7 @@ void read_from_file(void* buf, int offset, int len, int fd) {
   cfs_read(fd, buf, len);
 }
 /*---------------------------------------------------------------------------*/
+#endif
 /**
  * Checks inner signature (by vendor) for validity.
  */
@@ -696,11 +700,15 @@ void check_inner_signature() {
   if(!uECC_verify(publicManufacturer, hash, sizeof(hash), inner_signature, uECC_secp256r1())) {
     passed_inner = 0;
     LOG_ERR("Inner signature invalid.\n");
+#if USE_CFS
     write_to_file("0", SAVE_OFFSET_PASSED_INNER, sizeof(passed_inner), MANIFEST_SAVEFILE);
+#endif
   } else {
     passed_inner = 1; 
     LOG_INFO("Inner signature valid.\n");
+#if USE_CFS
     write_to_file("1", SAVE_OFFSET_PASSED_INNER, sizeof(passed_inner), MANIFEST_SAVEFILE);
+#endif
   }
 }
 /*---------------------------------------------------------------------------*/
@@ -731,14 +739,19 @@ void check_outer_signature(){
   if(!uECC_verify(publicUpdateserver, hash, sizeof(hash), outer_signature, uECC_secp256r1())) {
     passed_outer = 0;
     LOG_ERR("Outer signature invalid.\n");
+#if USE_CFS
     write_to_file("0", SAVE_OFFSET_PASSED_OUTER, sizeof(passed_outer), MANIFEST_SAVEFILE);
+#endif
   } else {
     passed_outer = 1; 
     LOG_INFO("Outer signature valid.\n");
+#if USE_CFS
     write_to_file("1", SAVE_OFFSET_PASSED_OUTER, sizeof(passed_outer), MANIFEST_SAVEFILE);
+#endif
   }
 }
 /*---------------------------------------------------------------------------*/
+#if USE_CFS
 /* 
  * Loads manifest parameters from savefile.
  */
@@ -809,6 +822,7 @@ void load_manifest_from_savefile() {
   }
 }
 /*---------------------------------------------------------------------------*/
+#endif
 /* 
  * Reacts to published messages on MUP control topics:
  * 
@@ -905,6 +919,7 @@ pub_handler(const char *topic, uint16_t topic_len, uint16_t payload_len,
       manifest_key = strtol(cast_buffer, NULL, 10);
       char* manifest_value = messagebuffer+index_comma+1;
 
+#if USE_CFS
       /**
        * For some reason, the board gets stuck after receiving the first part of the firmware image if this code is deleted.
        * MYSTERIOUS CODE BEGIN
@@ -912,44 +927,57 @@ pub_handler(const char *topic, uint16_t topic_len, uint16_t payload_len,
       int fd;
       char buf[256];
       /* MYSTERIOUS CODE END */
+#endif
 
       switch(manifest_key) {
         // app_id
         case 0:
           sprintf(app_id, manifest_value, sizeof(app_id));
           LOG_INFO("Received part of manifest: app_id=%s\n", app_id);
+#if USE_CFS
           write_to_file(app_id, SAVE_OFFSET_APP, sizeof(app_id), MANIFEST_SAVEFILE);
+#endif
           break;
         // link_offset
         case 1:
           link_offset = strtol(manifest_value, NULL, 10);
           LOG_INFO("Received part of manifest: link_offset=%ld\n", link_offset);
+#if USE_CFS
           write_to_file(&link_offset, SAVE_OFFSET_LOFFSET, sizeof(link_offset), MANIFEST_SAVEFILE);
+#endif
           break;
         // hash_update
         case 2: 
           sprintf(hash_update, manifest_value, strlen(manifest_value)+1);
           // hash_update[strlen(manifest_value)+2] = 0;
           LOG_INFO("Received part of manifest: hash_update=%.64s\n", hash_update);
+#if USE_CFS
           write_to_file(hash_update, SAVE_OFFSET_HASH, sizeof(hash_update), MANIFEST_SAVEFILE);
+#endif
           break;
         // size
         case 3:
           size = strtol(manifest_value, NULL, 10);
           LOG_INFO("Received part of manifest: size=%ld\n", size);
+#if USE_CFS
           write_to_file(&size, SAVE_OFFSET_SIZE, sizeof(size), MANIFEST_SAVEFILE);
+#endif
           break;
         // version
         case 4:
           version = strtol(manifest_value, NULL, 10);
           LOG_INFO("Received part of manifest: version=%ld\n", version);
+#if USE_CFS
           write_to_file(&version, SAVE_OFFSET_VERSION, sizeof(version), MANIFEST_SAVEFILE);
+#endif
           break;
         // old_version
         case 5:
           old_version = strtol(manifest_value, NULL, 10);
           LOG_INFO("Received part of manifest: old_version=%ld\n", old_version);
+#if USE_CFS
           write_to_file(&old_version, SAVE_OFFSET_OLD_VERSION, sizeof(old_version), MANIFEST_SAVEFILE);
+#endif
           break;
         // innerSignature
         case 6:
@@ -971,7 +999,9 @@ pub_handler(const char *topic, uint16_t topic_len, uint16_t payload_len,
             print_hex_string(inner_signature, 64);
             printf("\n");
           }
+#if USE_CFS
           write_to_file(inner_signature, SAVE_OFFSET_INNER_SIGNATURE, sizeof(inner_signature), MANIFEST_SAVEFILE);
+#endif
           strncpy(signatureBuffer, manifest_value, sizeof(signatureBuffer));
           printf("inner signature (signatureBuffer): %s\n", signatureBuffer);
           break;
@@ -979,7 +1009,9 @@ pub_handler(const char *topic, uint16_t topic_len, uint16_t payload_len,
         case 7:
           device_nonce = strtol(manifest_value, NULL, 10);
           LOG_INFO("Received part of manifest: device_nonce=%ld\n", device_nonce);
+#if USE_CFS
           write_to_file(&device_nonce, SAVE_OFFSET_DEVICE_NONCE, sizeof(device_nonce), MANIFEST_SAVEFILE);
+#endif
           break;
         // outer_signature
         case 8:
@@ -1001,11 +1033,14 @@ pub_handler(const char *topic, uint16_t topic_len, uint16_t payload_len,
             print_hex_string(outer_signature, 64);
             printf("\n");
           }
+#if USE_CFS
           write_to_file(outer_signature, SAVE_OFFSET_OUTER_SIGNATURE, sizeof(outer_signature), MANIFEST_SAVEFILE);
+#endif
           break;
         case 9:
           start_verify = 1;
           LOG_INFO("Received end delimiter of manifest.\n");
+#if USE_CFS
           /**
            * For some reason, the board gets stuck if this code is deleted.
            * MYSTERIOUS CODE BEGIN
@@ -1020,6 +1055,7 @@ pub_handler(const char *topic, uint16_t topic_len, uint16_t payload_len,
           cfs_remove(REQID_SAVEFILE);
           write_to_file(reqid_buffer, 0, sizeof(reqid_buffer), REQID_SAVEFILE);
           load_manifest_from_savefile();
+#endif
           check_inner_signature();
           check_outer_signature();
           if(passed_inner == 1 && passed_outer == 1) {
@@ -1029,7 +1065,9 @@ pub_handler(const char *topic, uint16_t topic_len, uint16_t payload_len,
             // ctimer_set(&unsubscribe_from_slice_topic_timer, UNSUBSCRIBE_TIMER_DURATION, unsubscribe, UPDATE_SLICES_TOPIC);
             expected_slice_no = 0;
           }
+#if USE_CFS
           cfs_remove(MANIFEST_SAVEFILE);
+#endif
           break;
       }
       if(return_code != 13) {
@@ -1673,7 +1711,9 @@ PROCESS_THREAD(mqtt_client_process, ev, data)
 {
   PROCESS_BEGIN();
 
+#if USE_CFS
   load_manifest_from_savefile();
+#endif
   sha256_init(&ctx_image);
 
   // Start verification 
@@ -1685,6 +1725,7 @@ PROCESS_THREAD(mqtt_client_process, ev, data)
     if(passed_outer == 1 && passed_inner == 1) {
       // UPDATE HERE 
       puts("[!] Passed both Verifications!");
+#if USE_CFS
       char buf[32] = {0};
       int fd = -1;
       fd = cfs_open(MANIFEST_SAVEFILE, CFS_READ | CFS_WRITE);
@@ -1696,6 +1737,7 @@ PROCESS_THREAD(mqtt_client_process, ev, data)
         printf("Written size: %s\n", buf);
         cfs_close(fd);
       }
+#endif
       send_update_success = 1;
 
     }

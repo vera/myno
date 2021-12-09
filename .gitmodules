@@ -1,3 +1,6 @@
 [submodule "src/iot-firmware/nrf52840dk-co2/RIOT"]
 	path = src/iot-firmware/nrf52840dk-co2/RIOT
 	url = https://github.com/vera/RIOT
+[submodule "src/iot-firmware/myno-update-protocol/contiki-ng"]
+	path = src/iot-firmware/myno-update-protocol/contiki-ng
+	url = git@github.com:contiki-ng/contiki-ng.git
