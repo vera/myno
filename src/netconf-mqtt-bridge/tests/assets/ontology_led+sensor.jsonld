@@ -1,0 +1,157 @@
+{
+	"@context": {
+		"base": "https://www.cs.uni-potsdam.de/bs/research/myno#",
+		"onem2m": "http://www.onem2m.org/ontology/Base_Ontology/base_ontology#",
+		"rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+		"xsd": "http://www.w3.org/2001/XMLSchema#",
+		"om-2":"http://www.ontology-of-units-of-measure.org/resource/om-2/"
+	},
+	"@id": "base:myDevice",
+	"@type": "onem2m:Device",
+	"onem2m:hasThingProperty": [
+		{
+			"@id": "base:deviceCategory",
+			"@type": "onem2m:ThingProperty",
+			"onem2m:hasValue": "TestDevices"
+		},
+		{
+			"@id": "base:deviceDesc",
+			"@type": "base:YangDescription",
+			"onem2m:hasValue": "Simple MQTT device with 1 sensor and 1 LED"
+		},
+		{
+			"@id": "base:deviceUuid",
+			"@type": "onem2m:ThingProperty",
+			"onem2m:hasValue": "TEST-DEVICE-SENSOR+LED"
+		}
+	],
+	"onem2m:hasFunctionality": [
+		{
+			"@id": "base:funcLedOn",
+			"@type": "onem2m:ControllingFunctionality",
+			"onem2m:hasCommand": {
+				"@id": "base:cmdLedOn",
+				"@type": "onem2m:Command",
+				"onem2m:hasInput": {
+					"@id": "base:uuidInput"
+				}
+			},
+			"onem2m:hasThingProperty": {
+				"@id": "base:funcDescLedOn",
+				"@type": "base:YangDescription",
+				"onem2m:hasValue": "LED anschalten"
+			}
+		},
+		{
+			"@id": "base:funcLedOff",
+			"@type": "onem2m:ControllingFunctionality",
+			"onem2m:hasCommand": {
+				"@id": "base:cmdLedOff",
+				"@type": "onem2m:Command",
+				"onem2m:hasInput": {
+					"@id": "base:uuidInput",
+					"@type": "onem2m:OperationInput",
+					"onem2m:hasInput": {
+						"@id": "base:deviceUuid"
+					},
+					"onem2m:hasThingProperty": {
+						"@id": "base:uuidYangDesc",
+						"@type": "base:YangDescription",
+						"onem2m:hasValue": "Target UUID for request"
+					}
+				}
+			},
+			"onem2m:hasThingProperty": {
+				"@id": "base:funcDescLedOff",
+				"@type": "base:YangDescription",
+				"onem2m:hasValue": "LED ausschalten"
+			}
+		},
+		{
+			"@id": "base:funcGetTemperature",
+			"@type": "onem2m:MeasuringFunctionality",
+			"onem2m:hasThingProperty": {
+				"@id": "base:funcDescTemperature",
+				"@type": "base:YangDescription",
+				"onem2m:hasValue": "Gibt die Umgebungstemperatur zurück"
+			}
+		}
+	],
+	"onem2m:hasService": {
+		"@id": "base:servNetconf",
+		"@type": "onem2m:Service",
+		"onem2m:exposesFunctionality": [
+			{
+				"@id": "base:funcLedOn"
+			},
+			{
+				"@id": "base:funcLedOff"
+			}
+		],
+		"onem2m:hasOperation": [
+			{
+				"@id": "base:opMqttLedOn",
+				"@type": "onem2m:Operation",
+				"onem2m:exposesCommand": {
+					"@id": "base:cmdLedOn"
+				},
+				"onem2m:hasInput": {
+					"@id": "base:uuidInput"
+				},
+				"onem2m:hasOperationState": {
+					"@id": "base:opState",
+                    "@type": "onem2m:OperationState",
+                    "onem2m:hasDataRestriction_pattern": [
+                        "10_OK",
+                        "11_NOOP",
+                        "12_ERROR"
+                    ],
+                    "onem2m:hasThingProperty": {
+                        "@id": "base:opDescState",
+                        "@type": "base:YangDescription",
+                        "onem2m:hasDataRestriction_pattern": [
+                            "10 successful",
+                            "11 nothing to do",
+                            "12 error"
+                        ]							
+                    }
+				},
+				"base:mqttMethod": "ledOn",
+				"base:mqttTopic": "led"
+			},
+			{
+				"@id": "base:opMqttLedOff",
+				"@type": "onem2m:Operation",
+				"onem2m:exposesCommand": {
+					"@id": "base:cmdLedOff"
+				},
+				"onem2m:hasInput": {
+					"@id": "base:uuidInput"
+				},
+				"onem2m:hasOperationState": {
+					"@id": "base:opState"
+				},
+				"base:mqttMethod": "ledOff",
+				"base:mqttTopic": "led"
+			}
+		],
+		"onem2m:hasSubService": [
+			{
+				"@id": "base:servTemperature",
+				"@type": "onem2m:Service",
+				"onem2m:exposesFunctionality": {
+					"@id": "base:funcGetTemperature"
+				},
+				"onem2m:hasOutputDataPoint": {
+					"@id": "base:outDpTemperature",
+					"@type": "onem2m:OutputDataPoint",
+					"base:mqttTopic": "sensor/temperature/TEST-DEVICE-SENSOR+LED",
+					"om-2:hasUnit": {
+						"@id": "om-2:degreeCelsius",
+						"om-2:symbol": "°C"
+					}
+				}
+			}
+		]
+	}
+}
