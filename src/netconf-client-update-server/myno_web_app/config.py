@@ -13,7 +13,6 @@ NOTIFICATIONS_FADEOUT_TIME = 15 # seconds
 Flask config parameters
 """
 html_template_file = 'interface.html'
-html_template_update = 'update.html'
 
 """
 MQTT config parameters

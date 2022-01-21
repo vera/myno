@@ -33,9 +33,6 @@ from myno_device import MynoDevice
 import netconf_methods as ncm
 
 
-bridge = None
-
-
 class NetconfMqttBridge:
 	def __init__(self):
 		# Set up logging
@@ -57,7 +54,7 @@ class NetconfMqttBridge:
 		sctrl = netconf_server.SSHUserPassController(username=config.NC_USERNAME, password=config.NC_PASSWORD)
 		try:
 			self.nc_server = netconf_server.NetconfSSHServer(server_ctl=sctrl,
-															 server_methods=ncm.NetconfMethods(),
+															 server_methods=ncm.NetconfMethods(self),
 															 port=config.NC_PORT,
 															 host_key=config.NC_HOST_KEY,
 															 debug=config.LOG_DEBUG)
@@ -76,9 +73,10 @@ class NetconfMqttBridge:
 		self.responses_lock = threading.Lock()
 
 		# Start main loop
-		self.logger.info("Init complete.")
+		self.logger.info("Init complete")
 
 	def run(self):
+		self.logger.info("Starting up")
 		running = True
 		while running:
 			try:
@@ -87,7 +85,7 @@ class NetconfMqttBridge:
 				self.logger.info("got keyboard interrupt")
 				running = False
 
-		self.logger.info("Shutting down!")
+		self.logger.info("Shutting down")
 
 	def on_mqtt_connect(self, mqtt_client, userdata, flags, rc):
 		self.logger.info("Connected to broker with result code %d" % rc)
@@ -111,12 +109,13 @@ class NetconfMqttBridge:
 				else:
 					self.device_descriptions[uuid] = dd
 			else:
+				self.logger.info("Creating device: %s" % (uuid))
 				if uuid in self.uuid_set:
 					self.logger.warn("Creating device: device already exists")
 					return
 
 				self.create_device(uuid)
-				del device_descriptions[uuid]
+				del self.device_descriptions[uuid]
 				self.mqtt_client.publish(msg.topic + config.TOPIC_SUFFIX_RESPONSE + uuid, "OK")
 				self.logger.info("Creating device: sent OK")
 
@@ -213,10 +212,7 @@ class NetconfMqttBridge:
 
 
 def main():
-	global bridge
-
-	bridge = NetconfMqttBridge()
-	bridge.run()
+	NetconfMqttBridge().run()
 
 if __name__ == "__main__":
 	main()

@@ -228,19 +228,19 @@
 								<fieldset>
 									<div><legend>{{ key }}<br></legend></div>
 									<table style="padding-bottom:10px!important;">
-									{% for parameter in value[1] %}
-										{% if parameter == "input_9_OuterSignature" %}
+									{% for parameter in value[3] %}
+										{% if parameter[0] == "input_9_OuterSignature" %}
 											<tr>
-												<td><label>{{ parameter }}:</label></td>
-												<td><input type="text" id="{{ parameter }}" name="{{ parameter }}" class="form-control" disabled style="background-color: gray;"></div></td>
+												<td><label>{{ parameter[0] }}:</label></td>
+												<td>wird automatisch generiert</td>
 											</tr>
 										{% else %}
 											<tr>
-												<td><label>{{ parameter }}:</label></td>
-												{% if parameter == "inputUpdateImage" %}
-													<td><input type="file" id="{{ parameter }}" name="{{ parameter }}" class="form-control"></div></td>
+												<td><label>{{ parameter[0] }}:</label></td>
+												{% if parameter[0] == "inputUpdateImage" %}
+													<td><input type="file" id="{{ parameter[0] }}" name="{{ parameter[0] }}" class="form-control"></div></td>
 												{% else %}
-													<td><input id="{{ parameter }}" name="{{ parameter }}" class="form-control"></div></td>
+													<td><input id="{{ parameter[0] }}" name="{{ parameter[0] }}" class="form-control"></div></td>
 												{% endif %}
 										{% endif %}
 									{% endfor %}

@@ -58,9 +58,9 @@ def init_ctx(text_to_parse):
         p.add_output_format(fmts)
         
     path = ''
-    repos = pyang.FileRepository(path, no_path_recurse=None)
+    repos = pyang.repository.FileRepository(path, no_path_recurse=None)
 
-    ctx = pyang.Context(repos)   
+    ctx = pyang.context.Context(repos)   
     
     emit_obj = fmts["yin"]
     emit_obj.setup_fmt(ctx)

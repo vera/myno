@@ -28,4 +28,4 @@ NC_PASSWORD = "admin"
 Logging config
 """
 LOGGER_NAME = "netconf-mqtt-bridge"
-LOG_DEBUG = False
+LOG_DEBUG = True

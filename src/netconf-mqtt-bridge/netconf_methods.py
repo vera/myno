@@ -21,17 +21,20 @@
 
 from lxml import etree
 from netconf import server as netconf_server
-from ncclient.xml_ import new_ele, sub_ele
 
 import config
-import netconf_mqtt_bridge
+import netconf_mqtt_bridge as nmb
 
 class NetconfMethods(netconf_server.NetconfMethods):
+	def __init__(self, bridge):
+		super()
+		self.bridge = bridge
+
 	# Return device list with UUIDs and category
-	def rpc_get(cls, unused_session, rpc, *unused_params):
+	def rpc_get(self, unused_session, rpc, *unused_params):
 		root = etree.Element("data")
 
-		for device in netconf_mqtt_bridge.bridge.devices:	
+		for device in self.bridge.devices:	
 			child1 = etree.SubElement(root, "device", xmlns=config.NAMESPACE + device.category)
 			child2 = etree.SubElement(child1, "device-id")
 			child3 = etree.SubElement(child2, "uuid")
@@ -44,7 +47,7 @@ class NetconfMethods(netconf_server.NetconfMethods):
 	# Return schema (YANG model)
 	def rpc_get_schema(self, unused_session, rpc, *unused_params):
 		root = etree.Element("data", xmlns="urn:ietf:params:xml:ns:yang:ietf-netconf-monitoring")
-		root.text = etree.CDATA(netconf_mqtt_bridge.bridge.yang_model)
+		root.text = etree.CDATA(self.bridge.yang_model)
 		return root
 
 	# TODO Implement ping
