@@ -16,23 +16,26 @@ uuids = {
 device_category = "TestDevices"
 base = "https://www.cs.uni-potsdam.de/bs/research/myno/"
 
+bridge = None
+
 
 """
 Fixtures
 """
 
-@pytest.fixture(autouse=True, scope="session")
-def setup():
-	netconf_mqtt_bridge.bridge = netconf_mqtt_bridge.NetconfMqttBridge()
+@pytest.fixture(autouse=True)
+def setup(mqtt_client):
+	global bridge
+	bridge = netconf_mqtt_bridge.NetconfMqttBridge(mqtt_client)
 	with open('tests/assets/ontology_mup.jsonld') as ontology:
-		netconf_mqtt_bridge.bridge.device_descriptions[uuids["mup"]] = ontology.read()
-		netconf_mqtt_bridge.bridge.create_device(uuids["mup"])
+		bridge.device_descriptions[uuids["mup"]] = ontology.read()
+		bridge.create_device(uuids["mup"])
 	with open('tests/assets/ontology_led+sensor.jsonld') as ontology:
-		netconf_mqtt_bridge.bridge.device_descriptions[uuids["sensor+led"]] = ontology.read()
-		netconf_mqtt_bridge.bridge.create_device(uuids["sensor+led"])
+		bridge.device_descriptions[uuids["sensor+led"]] = ontology.read()
+		bridge.create_device(uuids["sensor+led"])
 	with open('tests/assets/ontology_precision_agriculture.jsonld') as ontology:
-		netconf_mqtt_bridge.bridge.device_descriptions[uuids["pa"]] = ontology.read()
-		netconf_mqtt_bridge.bridge.create_device(uuids["pa"])
+		bridge.device_descriptions[uuids["pa"]] = ontology.read()
+		bridge.create_device(uuids["pa"])
 
 @pytest.fixture()
 def session():
@@ -40,10 +43,10 @@ def session():
 
 @pytest.fixture
 def netconf_methods():
-	netconf_methods = ncm.NetconfMethods()
+	netconf_methods = ncm.NetconfMethods(bridge)
 	yield netconf_methods
 
-@pytest.fixture
+@pytest.fixture()
 def mqtt_client(mocker):
 	class MqttClient:
 		def publish(self):
@@ -53,7 +56,7 @@ def mqtt_client(mocker):
 
 	mocker.patch.object(MqttClient, 'publish')
 	mock_client = MqttClient()
-	yield mocker.patch('netconf_mqtt_bridge.bridge.mqtt_client', mock_client)
+	yield mock_client
 
 
 """
@@ -88,8 +91,8 @@ def test_GET_SCHEMA(session, netconf_methods):
 def test_rpc_single_param(session, netconf_methods, mqtt_client):
 	req_id = 0
 	response = "OK!"
-	netconf_mqtt_bridge.bridge.current_req_id = req_id
-	netconf_mqtt_bridge.bridge.responses[str(req_id)] = response
+	bridge.current_req_id = req_id
+	bridge.responses[str(req_id)] = response
 
 	_, _, res = session.send_rpc("<funcGetDeviceToken><uuidInput>%s</uuidInput></funcGetDeviceToken>" % uuids["mup"])
 
@@ -117,8 +120,8 @@ def test_rpc_multiple_params(session, netconf_methods, mqtt_client):
 	}
 	req_id = 0
 	response = "OK!"
-	netconf_mqtt_bridge.bridge.current_req_id = req_id
-	netconf_mqtt_bridge.bridge.responses[str(req_id)] = response
+	bridge.current_req_id = req_id
+	bridge.responses[str(req_id)] = response
 
 	_, _, res = session.send_rpc(
 """<funcPubUpdateManifest>
@@ -150,9 +153,9 @@ def test_rpc_multiple_params(session, netconf_methods, mqtt_client):
 
 def test_rpc_no_response(session, netconf_methods, mqtt_client):
 	req_id = 0
-	netconf_mqtt_bridge.bridge.current_req_id = req_id
-	if str(req_id) in netconf_mqtt_bridge.bridge.responses:
-		del netconf_mqtt_bridge.bridge.responses[str(req_id)]
+	bridge.current_req_id = req_id
+	if str(req_id) in bridge.responses:
+		del bridge.responses[str(req_id)]
 
 	_, _, res = session.send_rpc("<funcGetDeviceToken><uuidInput>%s</uuidInput></funcGetDeviceToken>" % uuids["mup"])
 
@@ -168,7 +171,7 @@ def test_rpc_no_response(session, netconf_methods, mqtt_client):
 
 def test_rpc_too_many_params(session, netconf_methods, mqtt_client):
 	req_id = 0
-	netconf_mqtt_bridge.bridge.current_req_id = req_id
+	bridge.current_req_id = req_id
 
 	_, _, res = session.send_rpc("<funcGetDeviceToken><uuidInput>%s</uuidInput><someTag>someText</someTag></funcGetDeviceToken>" % uuids["mup"])
 
@@ -183,7 +186,7 @@ def test_rpc_too_many_params(session, netconf_methods, mqtt_client):
 
 def test_rpc_too_few_params(session, netconf_methods, mqtt_client):
 	req_id = 0
-	netconf_mqtt_bridge.bridge.current_req_id = req_id
+	bridge.current_req_id = req_id
 
 	_, _, res = session.send_rpc("<funcGetDeviceToken></funcGetDeviceToken>")
 

@@ -34,7 +34,7 @@ import netconf_methods as ncm
 
 
 class NetconfMqttBridge:
-	def __init__(self):
+	def __init__(self, mqtt_client=None):
 		# Set up logging
 		if config.LOG_DEBUG:
 			logging.basicConfig(level=logging.DEBUG)
@@ -43,12 +43,15 @@ class NetconfMqttBridge:
 
 		self.logger = logging.getLogger(config.LOGGER_NAME)
 
-		# Set up MQTT connection
-		self.mqtt_client = mqtt.Client()
-		self.mqtt_client.on_connect = self.on_mqtt_connect
-		self.mqtt_client.on_message = self.on_mqtt_message
-		self.mqtt_client.connect(host=config.BROKER_ADDR, port=config.BROKER_PORT)
-		self.mqtt_client.loop_start()
+		if not mqtt_client:
+			# Set up MQTT connection
+			self.mqtt_client = mqtt.Client()
+			self.mqtt_client.on_connect = self.on_mqtt_connect
+			self.mqtt_client.on_message = self.on_mqtt_message
+			self.mqtt_client.connect(host=config.BROKER_ADDR, port=config.BROKER_PORT)
+			self.mqtt_client.loop_start()
+		else:
+			self.mqtt_client = mqtt_client
 
 		# Set up NETCONF connection
 		sctrl = netconf_server.SSHUserPassController(username=config.NC_USERNAME, password=config.NC_PASSWORD)
@@ -170,7 +173,7 @@ class NetconfMqttBridge:
 
 		uuid = ""
 		param_check_failed = False
-		parameters = list(map(lambda p: { "tag": str(p.tag).split("}")[1], "text": str(p.text) }, params[0]))
+		parameters = list(map(lambda p: { "tag": str(p.tag).split("}")[-1], "text": str(p.text) }, params[0]))
 
 		if set(map(lambda p: p["tag"], parameters)) != set(map(lambda i: i["name"], rpc["inputs"])):
 			response = "TOO MANY OR TOO FEW PARAMS"
