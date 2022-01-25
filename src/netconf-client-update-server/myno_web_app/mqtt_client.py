@@ -32,11 +32,11 @@ def init(app):
 
 		if message.topic in update_server.unacked_slices:
 			payload = str(message.payload.decode()).split(',')
-			if int(payload[0]) not in config.unacked_slices[message.topic]:
+			if int(payload[0]) not in update_server.unacked_slices[message.topic]:
 				logging.warning("Received response for unknown slice " + payload[0])
 				return
-			if payload[1] == UPDATE_SLICE_ACK:
-				config.unacked_slices[message.topic].remove(int(payload[0]))
+			if payload[1] == config.UPDATE_SLICE_ACK:
+				update_server.unacked_slices[message.topic].remove(int(payload[0]))
 				logging.info("Received ACK for slice " + payload[0])
 		else:
 			_sensor_dict[message.topic] = (datetime.datetime.now(), message.payload.decode())

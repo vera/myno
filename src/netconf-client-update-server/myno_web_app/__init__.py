@@ -27,7 +27,7 @@ def create_app():
 		reload_event.set()
 
 		return render_template(config.html_template_file,
-													 device_dict=netconf_client.get_device_dict())
+							   device_dict=netconf_client.get_device_dict())
 
 	@app.route('/ajax', methods=['GET'])
 	def ajax():
@@ -35,9 +35,9 @@ def create_app():
 		Returns errors, notifications, nonces and sensor data as JSON.
 		"""
 		return jsonify(error=notifications.get_errors(),
-									notification=notifications.get_info(),
-									sensors=mqtt_client.get_sensor_dict(),
-									nonce=netconf_client.nonce_dict)
+					   notification=notifications.get_info(),
+					   sensors=mqtt_client.get_sensor_dict(),
+					   nonce=netconf_client.nonce_dict)
 
 	@app.route('/function_call/<thing>/<function>', defaults={'param_type' : None,'param_name': None, 'value': None}, methods=['GET', 'POST'])
 	@app.route('/function_call/<thing>/<function>/<param_name>', methods=['GET', 'POST']) # ?
@@ -48,11 +48,11 @@ def create_app():
 		"""
 		if function == "funcPubUpdateImage":
 			xml_rpcs = update_server.publish_image(thing, function,
-																						netconf_client.get_device_dict()[thing][1]['rpcs']['funcPubUpdateImage'][4] + '/' + thing,
-																						request.files["inputUpdateImage"])
+												   netconf_client.get_device_dict()[thing][1]['rpcs']['funcPubUpdateImage'][4] + '/' + thing,
+												   request.files["inputUpdateImage"])
 		elif function == "funcPubUpdateManifest":
 			xml_rpcs = update_server.build_manifest_rpcs(thing, function,
-																									sorted(request.form.items()))
+														 sorted(request.form.items()))
 		else:
 			xml_rpcs = netconf_client.build_xml_rpc(thing, function, param_type, param_name, value, request.form.items())
 		
