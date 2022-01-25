@@ -22,7 +22,7 @@
 #define HASH_LEN                65
 #define SIGNATURE_LEN           129
 
-#define SLICE_SIZE              128
+#define SLICE_SIZE              256
 
 typedef struct mup_manifest_t {
     char app_id[APP_ID_LEN];
@@ -38,6 +38,7 @@ typedef struct mup_manifest_t {
 
 typedef struct mup_image_slice_t {
     int num;
+    int data_len;
     uint8_t data[SLICE_SIZE];
 } mup_image_slice_t;
 

@@ -33,7 +33,8 @@ static void _on_cmd_received(MessageData *data)
         m.type = MSG_TYPE_IMAGE;
         mup_image_slice_t* slice = malloc(sizeof(rpc_message_t));
         slice->num = atoi(data->message->payload);
-        memcpy(slice->data, strstr((char *)data->message->payload, ",")+1, SLICE_SIZE);
+        slice->data_len = (int)data->message->payloadlen-(strstr((char *)data->message->payload, ",")-(char*)data->message->payload)-1;
+        memcpy(slice->data, strstr((char *)data->message->payload, ",")+1, slice->data_len);
         m.content.ptr = slice;
         int res;
         if((res = msg_send(&m, myno_device_pid)) != 1) {
@@ -235,7 +236,7 @@ int main(void)
         case MSG_TYPE_IMAGE:
             ;
             mup_image_slice_t* slice = (mup_image_slice_t*)m.content.ptr;
-            printf("myno_device: Got slice %d\n", slice->num);
+            printf("myno_device: Got slice %d (%d bytes)\n", slice->num, slice->data_len);
             handle_image_slice(slice);
             break;
         default:

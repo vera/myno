@@ -35,7 +35,7 @@ Update server config parameters
 BENCHMARK_UPDATES = True
 
 # For update slicing
-UPDATE_SLICE_SIZE = 128 # Bytes
+UPDATE_SLICE_SIZE = 256 # Bytes
 
 # Update slice transmission flow control
 UPDATE_FLOW_CONTROL_TYPE = 0 # Options: 0 = Using MQTT ACKs, 1 = Using sleep calls

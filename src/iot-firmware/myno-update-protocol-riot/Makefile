@@ -45,6 +45,11 @@ USEMODULE += sock_tcp
 USEMODULE += ztimer
 USEMODULE += ztimer_msec
 
+# include sha256
+USEMODULE += hashes
+
+USEPKG += micro-ecc
+
 ####
 
 include $(RIOTBASE)/Makefile.include
