@@ -4,3 +4,6 @@
 [submodule "src/iot-firmware/myno-update-protocol/contiki-ng"]
 	path = src/iot-firmware/myno-update-protocol/contiki-ng
 	url = git@github.com:contiki-ng/contiki-ng.git
+[submodule "src/iot-firmware/myno-update-protocol/RIOT"]
+	path = src/iot-firmware/myno-update-protocol/RIOT
+	url = git@github.com:vera/RIOT.git
