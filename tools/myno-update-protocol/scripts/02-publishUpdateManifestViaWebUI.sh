@@ -1,4 +1,5 @@
 #!/bin/bash
+DEVICE_UUID="TEST-DEVICE-MUP"
 
 curl \
 -F input_1_AppId=APP \
@@ -9,4 +10,4 @@ curl \
 -F input_6_OldVersion=1 \
 -F input_7_InnerSignature=b2011db0fb6a51c39dc448904d8f9ded8fee989af26e59830d90a8506f608116ea8653a1ff00a0e46b35d5d2252f1f9f21659b452a565d50f95cfa782e9b0f85 \
 -F input_8_DeviceNonce=123456 \
-http://localhost:5000/function_call/MYNO-UPDATE-8A12-4F4F-8F69-6B8F3C2E78DD/funcPubUpdateManifest/
+http://localhost:5000/function_call/$DEVICE_UUID/funcPubUpdateManifest
