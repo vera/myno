@@ -283,7 +283,6 @@ WHERE {
 		catstate.substmts.append(Statement(None, None, None, u'description', u'Identifies the device category')) # TODO add to yang or server
 		catstate.substmts.append(Statement(None, None, None, u'type', u'string'))
 		devstate.substmts.append(catstate)
-		result.substmts.append(devstate)
 
 		# Add telemetry functions
 		if self.telemetry_functions:
@@ -301,7 +300,9 @@ WHERE {
 					telemdpsstate.substmts.append(telemdpstate)
 				telemfuncstate.substmts.append(telemdpsstate)
 				telemstate.substmts.append(telemfuncstate)
-			result.substmts.append(telemstate)
+			devstate.substmts.append(telemstate)
+
+		result.substmts.append(devstate)
 
 		yang_data.append(result)
 

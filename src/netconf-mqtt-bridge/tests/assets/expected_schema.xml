@@ -244,16 +244,16 @@ module mqtt-TestDevices {
         "Identifies the device category";
       type string;
     }
-  }
-  container telemetry {
-    leaf funcGetTemperature {
-      description
-        "Gibt die Umgebungstemperatur zurück";
-      container datapoint {
-        leaf outDpTemperature {
-          default "sensor/temperature/TEST-DEVICE-SENSOR+LED";
-          type string;
-          units "degreeCelsius;°C";
+    container telemetry {
+      leaf funcGetTemperature {
+        description
+          "Gibt die Umgebungstemperatur zurück";
+        container datapoint {
+          leaf outDpTemperature {
+            default "sensor/temperature/TEST-DEVICE-SENSOR+LED";
+            type string;
+            units "degreeCelsius;°C";
+          }
         }
       }
     }
@@ -524,91 +524,91 @@ module mqtt-TestDevices {
         "Identifies the device category";
       type string;
     }
-  }
-  container telemetry {
-    leaf funcEvMoisture {
-      description
-        "event function for moisture sensor";
-      container datapoint {
-        leaf outDpEvMoisture {
-          default "event/sensor/moisture/moisture_1/TEST-DEVICE-PA";
-          type string;
+    container telemetry {
+      leaf funcEvMoisture {
+        description
+          "event function for moisture sensor";
+        container datapoint {
+          leaf outDpEvMoisture {
+            default "event/sensor/moisture/moisture_1/TEST-DEVICE-PA";
+            type string;
+          }
         }
       }
-    }
-    leaf funcEvTemperature {
-      description
-        "event function for temperature sensor";
-      container datapoint {
-        leaf outDpEvTemperature {
-          default "event/sensor/temperature/temperature_1/TEST-DEVICE-PA";
-          type string;
+      leaf funcEvTemperature {
+        description
+          "event function for temperature sensor";
+        container datapoint {
+          leaf outDpEvTemperature {
+            default "event/sensor/temperature/temperature_1/TEST-DEVICE-PA";
+            type string;
+          }
         }
       }
-    }
-    leaf funcGetBrightness {
-      description
-        "Get brightness from sensor";
-      container datapoint {
-        leaf outDpBrightness {
-          default "sensor/brightness/brightness_1/TEST-DEVICE-PA";
-          type string;
-          units "lux;lx";
+      leaf funcGetBrightness {
+        description
+          "Get brightness from sensor";
+        container datapoint {
+          leaf outDpBrightness {
+            default "sensor/brightness/brightness_1/TEST-DEVICE-PA";
+            type string;
+            units "lux;lx";
+          }
         }
       }
-    }
-    leaf funcGetHumidity {
-      description
-        "Get humidity from sensor";
-      container datapoint {
-        leaf outDpHumidity {
-          default "sensor/humidity/humidity_1/TEST-DEVICE-PA";
-          type string;
-          units "percent;%%";
+      leaf funcGetHumidity {
+        description
+          "Get humidity from sensor";
+        container datapoint {
+          leaf outDpHumidity {
+            default "sensor/humidity/humidity_1/TEST-DEVICE-PA";
+            type string;
+            units "percent;%%";
+          }
         }
       }
-    }
-    leaf funcGetMoisture {
-      description
-        "Get moisture from sensor";
-      container datapoint {
-        leaf outDpMoisture {
-          default "sensor/moisture/moisture_1/TEST-DEVICE-PA";
-          type string;
-          units "percent;%%";
+      leaf funcGetMoisture {
+        description
+          "Get moisture from sensor";
+        container datapoint {
+          leaf outDpMoisture {
+            default "sensor/moisture/moisture_1/TEST-DEVICE-PA";
+            type string;
+            units "percent;%%";
+          }
         }
       }
-    }
-    leaf funcGetPressure {
-      description
-        "Get pressure from sensor";
-      container datapoint {
-        leaf outDpPressure {
-          default "sensor/pressure/pressure_1/TEST-DEVICE-PA";
-          type string;
-          units "hectopascal;hPa";
+      leaf funcGetPressure {
+        description
+          "Get pressure from sensor";
+        container datapoint {
+          leaf outDpPressure {
+            default "sensor/pressure/pressure_1/TEST-DEVICE-PA";
+            type string;
+            units "hectopascal;hPa";
+          }
         }
       }
-    }
-    leaf funcGetRainDetect {
-      description
-        "Get rain detection signal from sensor";
-      container datapoint {
-        leaf outDpRainDetect {
-          default "sensor/rain/rain_1/TEST-DEVICE-PA";
-          type string;
-          units "percent;%%";
+      leaf funcGetRainDetect {
+        description
+          "Get rain detection signal from sensor";
+        container datapoint {
+          leaf outDpRainDetect {
+            default "sensor/rain/rain_1/TEST-DEVICE-PA";
+            type string;
+            units "percent;%%";
+          }
         }
       }
-    }
-    leaf funcGetTemperature {
-      description
-        "Get temperature from sensor";
-      container datapoint {
-        leaf outDpTemperature {
-          default "sensor/temperature/temperature_1/TEST-DEVICE-PA";
-          type string;
-          units "degreeCelsius;°C";
+      leaf funcGetTemperature {
+        description
+          "Get temperature from sensor";
+        container datapoint {
+          leaf outDpTemperature {
+            default "sensor/temperature/temperature_1/TEST-DEVICE-PA";
+            type string;
+            units "degreeCelsius;°C";
+          }
         }
       }
     }
