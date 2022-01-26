@@ -3,7 +3,8 @@
 		"base": "https://www.cs.uni-potsdam.de/bs/research/myno#",
 		"onem2m": "http://www.onem2m.org/ontology/Base_Ontology/base_ontology#",
 		"rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
-		"xsd": "http://www.w3.org/2001/XMLSchema#"
+		"xsd": "http://www.w3.org/2001/XMLSchema#",
+		"om-2":"http://www.ontology-of-units-of-measure.org/resource/om-2/"
 	},
 	"@id": "base:myDevice",
 	"@type": "onem2m:Device",
@@ -483,7 +484,11 @@
 				"onem2m:hasOutputDataPoint": {
 					"@id": "base:outDpTemperature",
 					"@type": "onem2m:OutputDataPoint",
-					"base:mqttTopic": "sensor/temperature/TEST-DEVICE-MUP"
+					"base:mqttTopic": "sensor/temperature/TEST-DEVICE-MUP",
+					"om-2:hasUnit": {
+						"@id": "om-2:degreeCelsius",
+						"om-2:symbol": "°C"
+					}
 				}
 			}
 		]
