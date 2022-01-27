@@ -65,7 +65,6 @@ class NetconfMqttBridge:
 			self.logger.error("Error occured during NETCONF connection setup: %s" % error)
 
 		# Initialize attributes
-		self.uuid_set = set()
 		self.devices = []
 		self.yang_model = ""
 		self.device_descriptions = {}
@@ -112,14 +111,10 @@ class NetconfMqttBridge:
 				else:
 					self.device_descriptions[uuid] = dd
 			else:
-				self.logger.info("Creating device: %s" % (uuid))
-				if uuid in self.uuid_set:
-					self.logger.warn("Creating device: device already exists")
-					return
-
-				self.create_device(uuid)
+				device = self.create_device(uuid)
 				del self.device_descriptions[uuid]
-				self.mqtt_client.publish(msg.topic + config.TOPIC_SUFFIX_RESPONSE + uuid, "OK")
+				self.logger.info("Created device: %s" % (device.uuid))
+				self.mqtt_client.publish(msg.topic + config.TOPIC_SUFFIX_RESPONSE + device.uuid, "OK")
 				self.logger.info("Creating device: sent OK")
 
 			self.device_descriptions_lock.release()
@@ -143,6 +138,8 @@ class NetconfMqttBridge:
 		for rpc in device.rpcs:
 			rpc_function = self.generate_rpc_function(uuid, rpc["name"])
 			setattr(ncm.NetconfMethods, "rpc_" + rpc["name"], rpc_function)
+
+		return device
 	
 	def generate_rpc_function(self, uuid, name):
 		def rpc_function(self2, unused_session, rpc, *unused_params):
