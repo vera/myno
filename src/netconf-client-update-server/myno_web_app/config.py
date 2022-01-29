@@ -49,3 +49,10 @@ UPDATE_SLICE_RESEND_INTERVAL = 5000 # milliseconds = 5 seconds
 
 # If UPDATE_FLOW_CONTROL_TYPE == 1
 UPDATE_SLICE_SLEEP_TIME = 0.585 # seconds
+
+"""
+MQTT client config parameters
+"""
+UPLOAD_TO_AWS = False
+AWS_API_URL = ""
+SENSOR_VALUES_CSV_PATH = "/home/pi/sensor_measures.csv"
