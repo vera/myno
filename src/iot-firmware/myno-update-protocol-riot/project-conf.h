@@ -50,7 +50,10 @@
 
 #define ONTOLOGY_END_DELIMITER          "END"
 
+/* Size of the MQTT read buffer
+ * (should be larger than SLICE_SIZE when using MUP) */
 #define BUF_SIZE                        512
+
 #define BLOCK_SIZE                      256
 
 #define DEVICE_IP                       "fd00::2"
@@ -71,7 +74,7 @@
 typedef struct rpc_message_t {
     char rpc_name[RPC_NAME_LENGTH];
     unsigned int reqid;
-    char params[MAX_NUM_PARAMS][MAX_PARAM_LENGTH];
+    uint8_t params[MAX_NUM_PARAMS][MAX_PARAM_LENGTH];
     unsigned int num_params;
 } rpc_message_t;
 

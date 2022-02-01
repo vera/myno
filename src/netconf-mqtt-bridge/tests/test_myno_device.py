@@ -74,48 +74,58 @@ def test_MUP():
 				"mqttMethod": "PUB-UPDATE-MANIFEST",
 				"inputs": [
 					{
-						"name": "input_1_AppId",
+						"name": "input_01_AppId",
 						"description": "App ID",
 						"datatype": "string"
 					},
 					{
-						"name": "input_2_LinkOffset",
+						"name": "input_02_LinkOffset",
 						"description":
 						"Link offset",
 						"datatype": "int"
 					},
 					{
-						"name": "input_3_Hash",
+						"name": "input_03_Hash",
 						"description": "Input hash",
-						"datatype": "string"
+						"datatype": "hexBinary"
 					},
 					{
-						"name": "input_4_Size",
+						"name": "input_04_Size",
 						"description": "Image size",
 						"datatype": "int"
 					},
 					{
-						"name": "input_5_Version",
+						"name": "input_05_Version",
 						"description": "Firmware version",
 						"datatype": "int"
 					},
 					{
-						"name": "input_6_OldVersion",
+						"name": "input_06_OldVersion",
 						"description": "Old firmware version",
 						"datatype": "int"
 					},
 					{
-						"name": "input_7_InnerSignature",
+						"name": "input_07_InnerKeyInfo",
+						"description": "Information on key used for inner signature",
+						"datatype": "hexBinary"
+					},
+					{
+						"name": "input_08_InnerSignature",
 						"description": "Inner signature",
 						"datatype": "hexBinary"
 					},
 					{
-						"name": "input_8_DeviceNonce",
+						"name": "input_09_DeviceNonce",
 						"description": "Nonce",
 						"datatype": "int"
 					},
 					{
-						"name": "input_9_OuterSignature",
+						"name": "input_10_OuterKeyInfo",
+						"description": "Information on key used for outer signature",
+						"datatype": "hexBinary"
+					},
+					{
+						"name": "input_11_OuterSignature",
 						"description": "Outer signature",
 						"datatype": "hexBinary"
 					},

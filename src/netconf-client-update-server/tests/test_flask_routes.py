@@ -40,6 +40,15 @@ def with_precision_agriculture_setup(mocker):
   device_id = list(device_dict_pa.items())[0][0]
   device_cat = list(device_dict_pa.items())[0][1][0]
 
+@pytest.fixture
+def with_mup_setup(mocker):
+  global device_id, device_cat
+
+  mocker.patch('myno_web_app.netconf_client.get_device_dict', return_value=device_dict_mup)
+
+  device_id = list(device_dict_pa.items())[0][0]
+  device_cat = list(device_dict_pa.items())[0][1][0]
+
 """
 GET /
 """
@@ -111,7 +120,7 @@ POST /function_call/<device_id>/<function_name>/<param_type>/<param_name>/<param
 
 def test_auto_func_for_pa_board(client, with_precision_agriculture_setup):
   """
-  Check that GET request for an automation function results in the correct XML RPC being dispatched
+  Check that POST request for an automation function results in the correct XML RPC being dispatched
   """
   auto_func = 'funcAutoMoisture'
   param_type = 'string'
@@ -135,4 +144,35 @@ def test_auto_func_for_pa_board(client, with_precision_agriculture_setup):
                      '<' + param_name + '>' + ','.join(form_data.values())[:-1].replace("<", "&lt;") + \
                      '</' + param_name + '>' + \
                      '</' + auto_func + '>'
+  assert xml_rpc == expected_xml_rpc
+
+"""
+POST /function_call/<device_id>/<function_name>
+"""
+
+def test_manifest_post_for_mup_board(client, with_mup_setup):
+  """
+  Check that POST request for manifest results in the correct XML RPC being dispatched
+  """
+  func_name = 'funcPubUpdateManifest'
+  form_data = { 'input_1_AppId': 'APP',
+                'input_2_LinkOffset': '0',
+                'input_3_Hash': 'cc6cf68547fe9a90070da75bdc953f34af1c708d1baf8c2912070d2f05845f73',
+                'input_4_Size': '555',
+                'input_5_Version': '2',
+                'input_6_OldVersion': '1',
+                'input_7_InnerKeyInfo': 'fecafecaf9ffffff',
+                'input_8_InnerSignature': '99fe5c11de573700bbf10d56052d77e3faafc0239dd5381ae1723945970a31436094181e03b38e84ca5338f58354977f06d144ac65fc1e58e8dd6a73b9130b99',
+                'input_9_DeviceNonce': '123456',
+                'input_10_OuterKeyInfo': 'efbeaddef9ffffff',
+                'input_11_OuterSignature': 'a1db0d8f0b42c6ac924fae045a6e4b22f0e081dd19d890b808c111377751f8525364d8170e1182523e008c5f75828b16518253f7c4a908e2e28cadd2f45af9e7' }
+
+  client.post('/function_call/' + device_id + '/' + func_name, data=form_data)
+
+  mock_nc_manager.dispatch.assert_called_once()
+  xml_rpc = tostring(mock_nc_manager.dispatch.call_args.args[0]).decode("utf-8")
+  expected_xml_rpc = '<' + func_name + '>' + '<uuidInput>' + device_id + '</uuidInput>'
+  for input in form_data:
+    expected_xml_rpc += '<' + input + '>' + form_data[input] + '</' + input + '>'
+  expected_xml_rpc += '</' + func_name + '>'
   assert xml_rpc == expected_xml_rpc

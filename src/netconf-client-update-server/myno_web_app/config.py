@@ -40,7 +40,8 @@ UPDATE_SLICE_SIZE = 256 # Bytes
 # Update slice transmission flow control
 UPDATE_FLOW_CONTROL_TYPE = 0 # Options: 0 = Using MQTT ACKs, 1 = Using sleep calls
 UPDATE_SLICE_ACK = "OK" # Expected ACK content (used only if UPDATE_FLOW_CONTROL_TYPE == 0)
-UPDATE_SLICE_RESPONSE_TOPIC_SUFFIX = "/response" # Suffix to append to update slice topic from ontology (used only if UPDATE_FLOW_CONTROL_TYPE == 0)
+UPDATE_SLICE_RESPONSE_TOPIC_SUFFIX = "/response" # Suffix to append to update slice topic from ontology for ACKs (used only if UPDATE_FLOW_CONTROL_TYPE == 0)
+UPDATE_SLICE_TOPIC_SUFFIX = "/slices" # Suffix to append to update slice topic from ontology for slices
 
 # If UPDATE_FLOW_CONTROL_TYPE == 0
 UPDATE_SLICE_WAIT_TIME = 120000 # milliseconds = 2 minutes

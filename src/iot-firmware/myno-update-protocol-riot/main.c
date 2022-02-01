@@ -25,6 +25,17 @@ static char shell_thread_stack[THREAD_STACKSIZE_MAIN];
 static kernel_pid_t myno_device_pid;
 
 
+static char* search_buffer(char *haystack, size_t haystacklen, char *needle, size_t needlelen)
+{
+    int searchlen = haystacklen - needlelen + 1;
+    for ( ; searchlen-- > 0; haystack++) {
+        if(!memcmp(haystack, needle, needlelen)) {
+            return haystack;
+        }
+    }
+    return NULL;
+}
+
 static void _on_cmd_received(MessageData *data)
 {
     msg_t m;
@@ -42,11 +53,9 @@ static void _on_cmd_received(MessageData *data)
         }
     }
     else {
-        printf("paho_mqtt_riot: message received on topic"
-               " %.*s: %.*s\n",
+        printf("paho_mqtt_riot: message received on topic %.*s\n",
                (int)data->topicName->lenstring.len,
-               data->topicName->lenstring.data, (int)data->message->payloadlen,
-               (char *)data->message->payload);
+               data->topicName->lenstring.data);
 
         char* sep = strstr(data->message->payload, ";");
         if(sep != data->message->payload && sep != NULL) {
@@ -77,11 +86,12 @@ static void _on_cmd_received(MessageData *data)
 
             while(parsed_bytes < (int)data->message->payloadlen) {
                 char* temp = params_sep+1;
-                params_sep = strstr(params_sep+1, ";");
+                params_sep = search_buffer(params_sep+1, (int)data->message->payloadlen-parsed_bytes, ",", 1);
                 int param_len;
-                if(params_sep != temp && params_sep != NULL) {
+                if(params_sep != NULL) {
                     param_len = params_sep-temp;
                 } else {
+                    /* final param */
                     param_len = (int)data->message->payloadlen-parsed_bytes;
                 }
                 parsed_bytes += param_len+1;

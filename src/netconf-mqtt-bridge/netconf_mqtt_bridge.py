@@ -169,20 +169,49 @@ class NetconfMqttBridge:
 		self.current_req_id_lock.release()
 
 		uuid = ""
-		param_check_failed = False
 		parameters = list(map(lambda p: { "tag": str(p.tag).split("}")[-1], "text": str(p.text) }, params[0]))
 
-		if set(map(lambda p: p["tag"], parameters)) != set(map(lambda i: i["name"], rpc["inputs"])):
-			response = "TOO MANY OR TOO FEW PARAMS"
+		expected_params = set(map(lambda i: i["name"], rpc["inputs"]))
+		actual_params = set(map(lambda p: p["tag"], parameters))
+		if expected_params != actual_params:
+			responses = []
+			unknown_params = set(map(lambda p: p["tag"], parameters)).difference(set(map(lambda i: i["name"], rpc["inputs"])))
+			if len(unknown_params) > 0:
+				self.logger.error("Failed to execute RPC: unknown params: %s" % ", ".join(list(unknown_params)))
+				responses.append("UNKNOWN PARAMS: %s" % ", ".join(list(unknown_params)))
+			missing_params = set(map(lambda i: i["name"], rpc["inputs"])).difference(set(map(lambda p: p["tag"], parameters)))
+			if len(missing_params) > 0:
+				self.logger.error("Failed to execute RPC: missing params: %s" % ", ".join(list(missing_params)))
+				responses.append("MISSING PARAMS: %s" % ", ".join(list(missing_params)))
+			response = ", ".join(responses)
 		else:
 			parameter_str = ""
 			for param in parameters:
 				if param["tag"] == "uuidInput":
 					uuid = param["text"]
 				else:
-					parameter_str += ";" + param["text"]
+					input = next(i for i in rpc["inputs"] if i["name"] == param["tag"])
+					if input["datatype"] == "hexBinary":
+						try:
+							parameter_str = bytes(parameter_str, "utf-8") + bytes.fromhex(param["text"]) + b","
+						except TypeError:
+							# Parameter string already contains binary param
+							parameter_str += bytes.fromhex(param["text"]) + bytes(",", "utf-8")
+					else:
+						try:
+							parameter_str += param["text"] + ","
+						except TypeError:
+							# Parameter string already contains binary param
+							parameter_str += bytes(param["text"] + ",", "utf-8")
+			parameter_str = parameter_str[:-1] # remove trailing comma
 
-			msg = str(req_id) + ";" + rpc["mqttMethod"] + parameter_str
+			try:
+				msg = str(req_id) + ";" + rpc["mqttMethod"]
+				if parameter_str:
+					msg += ";" + parameter_str
+			except TypeError:
+				# Parameter string is binary
+				msg = bytes(str(req_id) + ";" + rpc["mqttMethod"] + ";", "utf-8") + parameter_str
 			topic = rpc["mqttTopic"]
 			self.logger.info("Publishing %s to topic %s" % (msg, topic))
 

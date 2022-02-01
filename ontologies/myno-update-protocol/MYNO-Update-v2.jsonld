@@ -65,7 +65,7 @@
 							"@id": "base:propUpdateImage",
 							"@type": "onem2m:ThingProperty",
 							"onem2m:hasDataType": {
-								"@id": "xsd:hexBinary"
+								"@id": "xsd:string"
 							}
 						},
 						"onem2m:hasThingProperty": {
@@ -102,7 +102,7 @@
 				"@type": "onem2m:Command",
 				"onem2m:hasInput": [
 					{
-						"@id": "base:input_1_AppId",
+						"@id": "base:input_01_AppId",
 						"@type": "onem2m:OperationInput",
 						"onem2m:hasInput": {
 							"@id": "base:propAppID",
@@ -118,7 +118,7 @@
 						}
 					},
 					{
-						"@id": "base:input_2_LinkOffset",
+						"@id": "base:input_02_LinkOffset",
 						"@type": "onem2m:OperationInput",
 						"onem2m:hasInput": {
 							"@id": "base:propLinkOffset",
@@ -134,13 +134,13 @@
 						}
 					},
 					{
-						"@id": "base:input_3_Hash",
+						"@id": "base:input_03_Hash",
 						"@type": "onem2m:OperationInput",
 						"onem2m:hasInput": {
 							"@id": "base:propHash",
 							"@type": "onem2m:ThingProperty",
 							"onem2m:hasDataType": {
-								"@id": "xsd:string"
+								"@id": "xsd:hexBinary"
 							}
 						},
 						"onem2m:hasThingProperty": {
@@ -150,7 +150,7 @@
 						}
 					},
 					{
-						"@id": "base:input_4_Size",
+						"@id": "base:input_04_Size",
 						"@type": "onem2m:OperationInput",
 						"onem2m:hasInput": {
 							"@id": "base:propSize",
@@ -166,7 +166,7 @@
 						}
 					},
 					{
-						"@id": "base:input_5_Version",
+						"@id": "base:input_05_Version",
 						"@type": "onem2m:OperationInput",
 						"onem2m:hasInput": {
 							"@id": "base:propVersion",
@@ -182,7 +182,7 @@
 						}
 					},
 					{
-						"@id": "base:input_6_OldVersion",
+						"@id": "base:input_06_OldVersion",
 						"@type": "onem2m:OperationInput",
 						"onem2m:hasInput": {
 							"@id": "base:propOldVersion",
@@ -198,7 +198,23 @@
 						}
 					},
 					{
-						"@id": "base:input_7_InnerSignature",
+						"@id": "base:input_07_InnerKeyInfo",
+						"@type": "onem2m:OperationInput",
+						"onem2m:hasInput": {
+							"@id": "base:propInnerKeyInfo",
+							"@type": "onem2m:ThingProperty",
+							"onem2m:hasDataType": {
+								"@id": "xsd:hexBinary"
+							}
+						},
+						"onem2m:hasThingProperty": {
+							"@id": "base:descInputInnerKeyInfo",
+							"@type": "base:YangDescription",
+							"onem2m:hasValue": "Information on key used for inner signature"
+						}
+					},
+					{
+						"@id": "base:input_08_InnerSignature",
 						"@type": "onem2m:OperationInput",
 						"onem2m:hasInput": {
 							"@id": "base:propInnerSignature",
@@ -214,7 +230,7 @@
 						}
 					},
 					{
-						"@id": "base:input_8_DeviceNonce",
+						"@id": "base:input_09_DeviceNonce",
 						"@type": "onem2m:OperationInput",
 						"onem2m:hasInput": {
 							"@id": "base:propNonce",
@@ -230,7 +246,23 @@
 						}
 					},
 					{
-						"@id": "base:input_9_OuterSignature",
+						"@id": "base:input_10_OuterKeyInfo",
+						"@type": "onem2m:OperationInput",
+						"onem2m:hasInput": {
+							"@id": "base:propOuterKeyInfo",
+							"@type": "onem2m:ThingProperty",
+							"onem2m:hasDataType": {
+								"@id": "xsd:hexBinary"
+							}
+						},
+						"onem2m:hasThingProperty": {
+							"@id": "base:descInputOuterKeyInfo",
+							"@type": "base:YangDescription",
+							"onem2m:hasValue": "Information on key used for outer signature"
+						}
+					},
+					{
+						"@id": "base:input_11_OuterSignature",
 						"@type": "onem2m:OperationInput",
 						"onem2m:hasInput": {
 							"@id": "base:propOuterSignature",
@@ -421,7 +453,7 @@
 						"@id": "base:opState"
 					},
 					"base:mqttMethod": "PUB-UPDATE-IMAGE",
-					"base:mqttTopic": "yang/update/image"
+					"base:mqttTopic": "yang/update/image/TEST-DEVICE-MUP"
 				}
 			},
 			{
@@ -438,31 +470,37 @@
 					},
 					"onem2m:hasInput": [
 						{
-							"@id": "base:input_1_AppId"
+							"@id": "base:input_01_AppId"
 						},
 						{
-							"@id": "base:input_2_LinkOffset"
+							"@id": "base:input_02_LinkOffset"
 						},
 						{
-							"@id": "base:input_3_Hash"
+							"@id": "base:input_03_Hash"
 						},
 						{
-							"@id": "base:input_4_Size"
+							"@id": "base:input_04_Size"
 						},
 						{
-							"@id": "base:input_5_Version"
+							"@id": "base:input_05_Version"
 						},
 						{
-							"@id": "base:input_6_OldVersion"
+							"@id": "base:input_06_OldVersion"
 						},
 						{
-							"@id": "base:input_7_InnerSignature"
+							"@id": "base:input_07_InnerKeyInfo"
 						},
 						{
-							"@id": "base:input_8_DeviceNonce"
+							"@id": "base:input_08_InnerSignature"
 						},
 						{
-							"@id": "base:input_9_OuterSignature"
+							"@id": "base:input_09_DeviceNonce"
+						},
+						{
+							"@id": "base:input_10_OuterKeyInfo"
+						},
+						{
+							"@id": "base:input_11_OuterSignature"
 						},
 						{
 							"@id": "base:uuidInput"
@@ -472,7 +510,7 @@
 						"@id": "base:opState"
 					},
 					"base:mqttMethod": "PUB-UPDATE-MANIFEST",
-					"base:mqttTopic": "yang/update/manifest"
+					"base:mqttTopic": "yang/update/manifest/TEST-DEVICE-MUP"
 				}
 			},
 			{

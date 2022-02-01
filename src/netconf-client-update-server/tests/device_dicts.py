@@ -16,5 +16,15 @@ device_dict_pa = { "110A-4F4F-8F69-6B8F3C2E78ED": ["Board10",
                       "funcGetHumidity": ["sensor/humidity/humidity_1/110A-4F4F-8F69-6B8F3C2E78ED", "%"],
                       "funcGetTemperature": ["sensor/temperature/temperature_1/110A-4F4F-8F69-6B8F3C2E78ED", "\u00b0C"],
                       "funcGetRainDetect": ["sensor/rain/rain_1/110A-4F4F-8F69-6B8F3C2E78ED", "%"],
-                      "funcGetBrightness": ["sensor/brightness/brightness_1/110A-4F4F-8F69-6B8F3C2E78ED", "lx"]}
-                    }] }
+                      "funcGetBrightness": ["sensor/brightness/brightness_1/110A-4F4F-8F69-6B8F3C2E78ED", "lx"]
+                    }}] }
+
+device_dict_mup = { 'TEST-DEVICE-MUP': ('TestDevices',
+                    {'rpcs': {
+                      'funcGetDeviceToken': ('Get token for MYNO update', [], [], [], 'yang/update/token'),
+                      'funcLedOff': ('LED ausschalten', [], [], [], 'led'),
+                      'funcLedOn': ('LED anschalten', [], [], [], 'led'),
+                      'funcPubUpdateImage': ('Publish update image', 'inputUpdateImage', 'hexBinary', [['inputUpdateImage', 'hexBinary']], 'yang/update/image'), 'funcPubUpdateManifest': ('Publish update manifest', 'input_9_OuterSignature', 'hexBinary', [['input_1_AppId', 'string'], ['input_2_LinkOffset', 'int'], ['input_3_Hash', 'hexBinary'], ['input_4_Size', 'int'], ['input_5_Version', 'int'], ['input_6_OldVersion', 'int'], ['input_7_InnerKeyInfo', 'hexBinary'], ['input_8_InnerSignature', 'hexBinary'], ['input_9_DeviceNonce', 'int'], ['input_10_OuterKeyInfo', 'hexBinary'], ['input_10_OuterSignature', 'hexBinary']], 'yang/update/manifest')
+                    }, 'sensors': {
+                      'funcGetTemperature': ['sensor/temperature/TEST-DEVICE-MUP', '°C']
+                    }}) }

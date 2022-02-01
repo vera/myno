@@ -48,11 +48,10 @@ def create_app():
 		"""
 		if function == "funcPubUpdateImage":
 			xml_rpcs = update_server.publish_image(thing, function,
-												   netconf_client.get_device_dict()[thing][1]['rpcs']['funcPubUpdateImage'][4] + '/' + thing,
+												   netconf_client.get_device_dict()[thing][1]['rpcs']['funcPubUpdateImage'][4],
 												   request.files["inputUpdateImage"])
 		elif function == "funcPubUpdateManifest":
-			xml_rpcs = update_server.build_manifest_rpcs(thing, function,
-														 sorted(request.form.items()))
+			xml_rpcs = update_server.build_manifest_rpcs(thing, function, list(request.form.items()))
 		else:
 			xml_rpcs = netconf_client.build_xml_rpc(thing, function, param_type, param_name, value, request.form.items())
 		

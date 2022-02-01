@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "paho_mqtt.h"
 #include "MQTTClient.h"
-#include "hashes/sha256.h"
 #include "uECC.h"
 
 #include "project-conf.h"
@@ -16,6 +16,8 @@ static sha256_context_t sha256_ctx;
 
 static int expected_slice = 0;
 
+static kernel_pid_t myno_device_pid;
+
 
 inline int _send_rpc_error_response(char* reqid_prefix) {
     return myno_mqtt_publish(CMD_RESPONSE_ERROR, strlen(CMD_RESPONSE_ERROR),
@@ -23,24 +25,54 @@ inline int _send_rpc_error_response(char* reqid_prefix) {
                              TOPIC_RESPONSE, QOS0, BLOCK_SIZE);
 }
 
-static int _check_signature(uint8_t* key, char* buf, char* signature, size_t signature_len) {
-    sha256_context_t ctx;
-    uint8_t digest[SHA256_DIGEST_LENGTH];
+static int _check_signature(uint8_t* key, mup_keyinfo_t keyinfo, void* buf, size_t buf_len, uint8_t* signature, size_t signature_len) {
+    if(keyinfo.alg == IANA_COSE_ALG_ES256 && keyinfo.kty == IANA_COSE_KTY_EC2) {
+        sha256_context_t ctx;
+        uint8_t digest[SHA256_DIGEST_LENGTH];
 
-    sha256_init(&ctx);
-    sha256_update(&ctx, buf, strlen(buf));
-    sha256_final(&ctx, digest);
+        sha256_init(&ctx);
+        sha256_update(&ctx, buf, buf_len);
+        sha256_final(&ctx, digest);
 
-    uint8_t s[64];
-    for(size_t i = 0; i < sizeof(s)/sizeof(s[0]); i++) {
-        sscanf(signature+(i*2), "%02hhx", &s[i]);
-    }
+        uECC_Curve curve;
+        switch(keyinfo.crv) {
+            case IANA_COSE_CRV_P256:
+                curve = uECC_secp256r1();
+                break;
+            case IANA_COSE_CRV_SECP256K1:
+                curve = uECC_secp256k1();
+                break;
+            default:
+                printf("mup: Failed to check signature: Unknown curve.\n");
+                return -2;
+        }
 
-    if(!uECC_verify(key, digest, sizeof(digest), s, uECC_secp256r1())) {
-        return -1;
+        if(!uECC_verify(key, digest, sizeof(digest), signature, curve)) {
+            return -1;
+        }
+        else {
+            return 0;
+        }
     }
     else {
-        return 0;
+        printf("mup: Failed to check signature: Unknown key type or algorithm.\n");
+        return -2;
+    }
+}
+
+static void _on_slice_received(MessageData *data)
+{
+    msg_t m;
+
+    m.type = MSG_TYPE_IMAGE;
+    mup_image_slice_t* slice = malloc(sizeof(rpc_message_t));
+    slice->num = atoi(data->message->payload);
+    slice->data_len = (int)data->message->payloadlen-(strstr((char *)data->message->payload, ",")-(char*)data->message->payload)-1;
+    memcpy(slice->data, strstr((char *)data->message->payload, ",")+1, slice->data_len);
+    m.content.ptr = slice;
+    int res;
+    if((res = msg_send(&m, myno_device_pid)) != 1) {
+        printf("paho_mqtt_riot: Sending message failed (%d)\n", res);
     }
 }
 
@@ -54,33 +86,55 @@ int handle_cmd_gettoken(char* reqid_prefix)
 
 int handle_cmd_manifest(char* reqid_prefix, rpc_message_t* rpc)
 {
-    if(rpc->num_params != 9) {
-        printf("mup: Received manifest with wrong number of fields\n");
+    if(rpc->num_params != 11) {
+        printf("mup: Received manifest with wrong number of fields (%d)\n", rpc->num_params);
         return _send_rpc_error_response(reqid_prefix);
     }
 
-    strncpy(manifest.app_id, rpc->params[0], APP_ID_LEN);
-    manifest.link_offset = atoi(rpc->params[1]);
-    strncpy(manifest.hash, rpc->params[2], HASH_LEN);
-    manifest.size = atoi(rpc->params[3]);
-    manifest.version = atoi(rpc->params[4]);
-    manifest.old_version = atoi(rpc->params[5]);
-    strncpy(manifest.inner_signature, rpc->params[6], SIGNATURE_LEN);
-    manifest.nonce = atoi(rpc->params[7]);
-    strncpy(manifest.outer_signature, rpc->params[8], SIGNATURE_LEN);
+    strncpy(manifest.app_id, (char*)rpc->params[0], APP_ID_LEN);
+    manifest.link_offset = atoi((char*)rpc->params[1]);
+    memcpy(manifest.hash, rpc->params[2], HASH_LEN);
+    manifest.size = atoi((char*)rpc->params[3]);
+    manifest.version = atoi((char*)rpc->params[4]);
+    manifest.old_version = atoi((char*)rpc->params[5]);
+    memcpy(&manifest.inner_keyinfo, rpc->params[6], sizeof(mup_keyinfo_t));
+    memcpy(manifest.inner_signature, rpc->params[7], SIGNATURE_LEN);
+    manifest.nonce = atoi((char*)rpc->params[8]);
+    memcpy(&manifest.outer_keyinfo, rpc->params[9], sizeof(mup_keyinfo_t));
+    memcpy(manifest.outer_signature, rpc->params[10], SIGNATURE_LEN);
 
     printf("mup: Received manifest\n");
     printf("mup: - App ID: %s\n", manifest.app_id);
     printf("mup: - Link offset: %d\n", manifest.link_offset);
-    printf("mup: - Hash: %s\n", manifest.hash);
+    printf("mup: - Hash: ");
+    for (size_t i = 0; i < HASH_LEN; i++) {
+        printf("%02x", manifest.hash[i]);
+    }
+    printf("\n");
     printf("mup: - Size: %d\n", manifest.size);
     printf("mup: - Version: %d\n", manifest.version);
     printf("mup: - Old version: %d\n", manifest.old_version);
-    printf("mup: - Inner signature: %s\n", manifest.inner_signature);
+    printf("mup: - Inner key info: Key ID: 0x%04X, Algorithm: %d, Key Type: %d, Curve: %d\n", manifest.inner_keyinfo.kid, manifest.inner_keyinfo.alg, manifest.inner_keyinfo.kty, manifest.inner_keyinfo.crv);
+    printf("mup: - Inner signature: ");
+    for (size_t i = 0; i < SIGNATURE_LEN; i++) {
+        printf("%02x", manifest.inner_signature[i]);
+    }
+    printf("\n");
     printf("mup: - Nonce: %d\n", manifest.nonce);
-    printf("mup: - Outer signature: %s\n", manifest.outer_signature);
+    printf("mup: - Outer key info: Key ID: 0x%04X, Algorithm: %d, Key Type: %d, Curve: %d\n", manifest.outer_keyinfo.kid, manifest.outer_keyinfo.alg, manifest.outer_keyinfo.kty, manifest.outer_keyinfo.crv);
+    printf("mup: - Outer signature: ");
+    for (size_t i = 0; i < SIGNATURE_LEN; i++) {
+        printf("%02x", manifest.outer_signature[i]);
+    }
+    printf("\n");
 
     expected_slice = 0;
+    /* Subscribe to update slice topic */
+    myno_device_pid = thread_getpid();
+    int res;
+    if ((res = myno_mqtt_subscribe(TOPIC_UPDATE_IMAGE, QOS0, _on_slice_received)) != 0) {
+        printf("mup: Unable to subscribe to slice topic (%d)\n", res);
+    }
 
     return myno_mqtt_publish(CMD_RESPONSE_OK, strlen(CMD_RESPONSE_OK),
                              reqid_prefix, strlen(reqid_prefix),
@@ -90,7 +144,7 @@ int handle_cmd_manifest(char* reqid_prefix, rpc_message_t* rpc)
 int handle_cmd_update(char* reqid_prefix, rpc_message_t* rpc)
 {
     if(rpc->num_params != 1
-       && strncmp(rpc->params[0], CMD_IMAGE_START_KEYWORD, strlen(rpc->params[0])) != 0) {
+       && strncmp((char*)rpc->params[0], CMD_IMAGE_START_KEYWORD, strlen((char*)rpc->params[0])) != 0) {
         printf("mup: Received unknown update command\n");
         return _send_rpc_error_response(reqid_prefix);
     }
@@ -99,29 +153,17 @@ int handle_cmd_update(char* reqid_prefix, rpc_message_t* rpc)
 
     uint8_t digest[SHA256_DIGEST_LENGTH];
     sha256_final(&sha256_ctx, digest);
-    char actual_hash[HASH_LEN];
-    for(int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
-        snprintf(actual_hash+(i*2), 3, "%02x", digest[i]);
-    }
-    if(strncmp(actual_hash, manifest.hash, HASH_LEN) != 0) {
-        printf("mup: Hash (%s) doesn't match manifest hash (%s)\n", actual_hash, manifest.hash);
+    if(memcmp(digest, manifest.hash, HASH_LEN) != 0) {
+        printf("mup: Hash doesn't match manifest hash\n");
         return _send_rpc_error_response(reqid_prefix);
     }
 
-    char buf[sizeof(mup_manifest_t)];
-    snprintf(buf, sizeof(buf), "%s;%d;%.64s;%d;%d;%d",
-             manifest.app_id, manifest.link_offset, manifest.hash,
-             manifest.size, manifest.version, manifest.old_version);
-    if(_check_signature(public_manufacturer, buf, manifest.inner_signature, SIGNATURE_LEN) < 0) {
+    if(_check_signature(public_manufacturer, manifest.inner_keyinfo, (mup_inner_manifest_t*)&manifest, sizeof(mup_inner_manifest_t), manifest.inner_signature, SIGNATURE_LEN) < 0) {
         printf("mup: Inner signature invalid\n");
         return _send_rpc_error_response(reqid_prefix);
     }
 
-    snprintf(buf, sizeof(buf), "%s;%d;%.64s;%d;%d;%d;%s;%d",
-             manifest.app_id, manifest.link_offset, manifest.hash,
-             manifest.size, manifest.version, manifest.old_version,
-             manifest.inner_signature, manifest.nonce);
-    if(_check_signature(public_updateserver, buf, manifest.outer_signature, SIGNATURE_LEN) < 0) {
+    if(_check_signature(public_updateserver, manifest.outer_keyinfo, (mup_outer_manifest_t*)&manifest, sizeof(mup_outer_manifest_t), manifest.outer_signature, SIGNATURE_LEN) < 0) {
         printf("mup: Outer signature invalid\n");
         return _send_rpc_error_response(reqid_prefix);
     }

@@ -19,7 +19,7 @@ end_update = 0
 
 unacked_slices = {}
 
-def publish_image(thing, function, slice_topic, image_file):
+def publish_image(thing, function, topic, image_file):
   """
   Publishes firmware image in slices.
   """
@@ -28,7 +28,8 @@ def publish_image(thing, function, slice_topic, image_file):
   global benchmark_array_slices, benchmark_array_whole
 
   i = 0
-  response_topic = slice_topic + config.UPDATE_SLICE_RESPONSE_TOPIC_SUFFIX
+  slice_topic = topic + config.UPDATE_SLICE_TOPIC_SUFFIX
+  response_topic = topic + config.UPDATE_SLICE_RESPONSE_TOPIC_SUFFIX
   unacked_slices[response_topic] = []
 
   if config.BENCHMARK_UPDATES:
@@ -110,26 +111,14 @@ def build_manifest_rpcs(thing, function, form_items):
   extendedManifest = extendedManifest.rstrip(';')
 
   # Add outer signature if necessary
-  if("input_9_OuterSignature" in list(map(lambda i: i[0], form_items))):
-    pass
-  child = etree.SubElement(xml_rpc, "uuidInput")
-  child.text = thing
-  hashString = hashlib.sha256(extendedManifest.encode()).hexdigest()
-  out = subprocess.Popen(['./createSig', 'signU', extendedManifest], stdout=subprocess.PIPE)
-  stdout, stderr = out.communicate()
-  outerSignature = str(stdout.decode("utf-8")).strip("\n")
-  inputParameters = etree.SubElement(xml_rpc, "input_9_OuterSignature")
-  inputParameters.text = outerSignature
+  if("input_11_OuterSignature" not in list(map(lambda i: i[0], form_items))):
+    #hashString = hashlib.sha256(extendedManifest.encode()).hexdigest()
+    out = subprocess.Popen(['./createSig', 'signU', extendedManifest], stdout=subprocess.PIPE)
+    stdout, _ = out.communicate()
+    outerSignature = str(stdout.decode("utf-8")).strip("\n")
+    inputParameters = etree.SubElement(xml_rpc, "input_11_OuterSignature")
+    inputParameters.text = outerSignature
 
-  manifest_rpcs.append(copy.deepcopy(xml_rpc))
-  i += 1
-
-  # Generate final "START-UPDATE" RPC
-  xml_rpc = xml_.to_ele('<' + function + '/>')
-  child = etree.SubElement(xml_rpc, "uuidInput")
-  child.text = thing
-  inputParameters = etree.SubElement(xml_rpc, "input_9_OuterSignature")
-  inputParameters.text = "START-UPDATE"
   manifest_rpcs.append(copy.deepcopy(xml_rpc))
 
   return manifest_rpcs

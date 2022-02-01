@@ -110,13 +110,15 @@ def test_rpc_multiple_params(session, netconf_methods, mqtt_client):
 	params = {
 		"app_id": "TestApp",
 		"offset": 8000,
-		"image_hash": "3582958",
+		"image_hash_binary": "abcdef",
 		"image_size": 500,
 		"version": 2,
 		"old_version": 1,
-		"inner_signature": "01010101",
-		"nonce": 42,
-		"outer_signature": "01010101"
+		"inner_key_info_binary": "fecafecaf9ffffff",
+		"inner_signature_binary": "abcdef",
+		"nonce": 123456,
+		"outer_key_info_binary": "efbeaddef9ffffff",
+		"outer_signature_binary": "abcdef"
 	}
 	req_id = 0
 	response = "OK!"
@@ -126,17 +128,19 @@ def test_rpc_multiple_params(session, netconf_methods, mqtt_client):
 	_, _, res = session.send_rpc(
 """<funcPubUpdateManifest>
   <uuidInput>%s</uuidInput>
-  <input_1_AppId>%s</input_1_AppId>
-  <input_2_LinkOffset>%d</input_2_LinkOffset>
-  <input_3_Hash>%s</input_3_Hash>
-  <input_4_Size>%d</input_4_Size>
-  <input_5_Version>%d</input_5_Version>
-  <input_6_OldVersion>%d</input_6_OldVersion>
-  <input_7_InnerSignature>%s</input_7_InnerSignature>
-  <input_8_DeviceNonce>%d</input_8_DeviceNonce>
-  <input_9_OuterSignature>%s</input_9_OuterSignature>
+  <input_01_AppId>%s</input_01_AppId>
+  <input_02_LinkOffset>%d</input_02_LinkOffset>
+  <input_03_Hash>%s</input_03_Hash>
+  <input_04_Size>%d</input_04_Size>
+  <input_05_Version>%d</input_05_Version>
+  <input_06_OldVersion>%d</input_06_OldVersion>
+  <input_07_InnerKeyInfo>%s</input_07_InnerKeyInfo>
+  <input_08_InnerSignature>%s</input_08_InnerSignature>
+  <input_09_DeviceNonce>%d</input_09_DeviceNonce>
+  <input_10_OuterKeyInfo>%s</input_10_OuterKeyInfo>
+  <input_11_OuterSignature>%s</input_11_OuterSignature>
 </funcPubUpdateManifest>
-""" % (uuids["mup"], params["app_id"], params["offset"], params["image_hash"], params["image_size"], params["version"], params["old_version"], params["inner_signature"], params["nonce"], params["outer_signature"]))
+""" % (uuids["mup"], params["app_id"], params["offset"], params["image_hash_binary"], params["image_size"], params["version"], params["old_version"], params["inner_key_info_binary"], params["inner_signature_binary"], params["nonce"], params["outer_key_info_binary"], params["outer_signature_binary"]))
 
 	assert res == (
 """<?xml version="1.0" encoding="UTF-8"?><rpc-reply xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" message-id="%d">
@@ -146,9 +150,22 @@ def test_rpc_multiple_params(session, netconf_methods, mqtt_client):
 </rpc-reply>
 """ % (req_id, response))
 	mqtt_client.publish.assert_called_once()
-	expected_message = str(req_id) + ";PUB-UPDATE-MANIFEST"
+	expected_message = str(req_id) + ";PUB-UPDATE-MANIFEST;"
 	for key in params:
-		expected_message += ";" + str(params[key])
+		if "_binary" in key:
+			# Special treatment of binary params
+			try:
+				expected_message = bytes(expected_message, "utf-8") + bytes.fromhex(params[key]) + b","
+			except TypeError:
+				# If message already includes binary params
+				expected_message += bytes.fromhex(params[key]) + b","
+		else:
+			try:
+				expected_message += str(params[key]) + ","
+			except TypeError:
+				# If message already includes binary params
+				expected_message += bytes(str(params[key]) + ",", "utf-8")
+	expected_message = expected_message[:-1]
 	assert mqtt_client.publish.call_args.args == ("yang/update/manifest", expected_message)
 
 def test_rpc_no_response(session, netconf_methods, mqtt_client):
@@ -178,7 +195,7 @@ def test_rpc_too_many_params(session, netconf_methods, mqtt_client):
 	assert res == (
 """<?xml version="1.0" encoding="UTF-8"?><rpc-reply xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" message-id="%d">
   <data>
-    <retval>TOO MANY OR TOO FEW PARAMS</retval>
+    <retval>UNKNOWN PARAMS: someTag</retval>
   </data>
 </rpc-reply>
 """ % req_id)
@@ -193,7 +210,22 @@ def test_rpc_too_few_params(session, netconf_methods, mqtt_client):
 	assert res == (
 """<?xml version="1.0" encoding="UTF-8"?><rpc-reply xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" message-id="%d">
   <data>
-    <retval>TOO MANY OR TOO FEW PARAMS</retval>
+    <retval>MISSING PARAMS: uuidInput</retval>
+  </data>
+</rpc-reply>
+""" % req_id)
+	mqtt_client.publish.assert_not_called()
+
+def test_rpc_too_many_and_too_few_params(session, netconf_methods, mqtt_client):
+	req_id = 0
+	bridge.current_req_id = req_id
+
+	_, _, res = session.send_rpc("<funcGetDeviceToken><someTag>someText</someTag></funcGetDeviceToken>")
+
+	assert res == (
+"""<?xml version="1.0" encoding="UTF-8"?><rpc-reply xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" message-id="%d">
+  <data>
+    <retval>UNKNOWN PARAMS: someTag, MISSING PARAMS: uuidInput</retval>
   </data>
 </rpc-reply>
 """ % req_id)
