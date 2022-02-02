@@ -239,6 +239,12 @@ int main(void)
             else if(strncmp(rpc->rpc_name, CMD_IMAGE, strlen(CMD_IMAGE)) == 0) {
                 handle_cmd_update(reqid_prefix, rpc);
             }
+            else if(strncmp(rpc->rpc_name, CMD_ROLLOVER_U, strlen(CMD_ROLLOVER_U)) == 0) {
+                handle_cmd_rollover_u(reqid_prefix, rpc);
+            }
+            else if(strncmp(rpc->rpc_name, CMD_ROLLOVER_V, strlen(CMD_ROLLOVER_V)) == 0) {
+                handle_cmd_rollover_v(reqid_prefix, rpc);
+            }
             else {
                 printf("myno_device: Unrecognized command\n");
             }

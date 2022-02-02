@@ -12,4 +12,4 @@ cat $1 | awk '
     {for (i=1; i<=NF; i+=2) gsub(/[[:space:]]/,"",$i)} 
     1
 ' | tr -d '\n' | sed 's/"/\\"/g'
-echo "\n"
+echo ""

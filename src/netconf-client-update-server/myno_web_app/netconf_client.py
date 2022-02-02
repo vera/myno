@@ -372,8 +372,12 @@ def build_xml_rpc(thing, function, param_type, param_name, value, form_items):
 					else:
 							value = value + val + ","
 			value = value[:-1]
+	else:
+		for key, value in form_items:
+			inputParameters = etree.SubElement(xml_rpc, key)
+			inputParameters.text = value
 
-	if value != None:
+	if value and param_name:
 		child = etree.SubElement(xml_rpc, param_name)
 		child.text = value
 

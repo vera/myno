@@ -7,6 +7,8 @@
 #define CMD_GETTOKEN            "GET-DEVICE-TOKEN"
 #define CMD_MANIFEST            "PUB-UPDATE-MANIFEST"
 #define CMD_IMAGE               "PUB-UPDATE-IMAGE"
+#define CMD_ROLLOVER_V          "PUB-UPDATE-KEY-V"
+#define CMD_ROLLOVER_U          "PUB-UPDATE-KEY-U"
 
 #define CMD_IMAGE_START_KEYWORD "FIN"
 
@@ -23,6 +25,7 @@
 #define APP_ID_LEN              32
 #define HASH_LEN                SHA256_DIGEST_LENGTH
 #define SIGNATURE_LEN           64
+#define KEY_LEN                 64
 
 #define SLICE_SIZE              256
 
@@ -70,6 +73,36 @@ typedef struct mup_manifest_t {
     uint8_t outer_signature[SIGNATURE_LEN];
 } mup_manifest_t;
 
+typedef struct mup_key_manifest_u_t {
+    char app_id[APP_ID_LEN];
+    int version;
+    mup_keyinfo_t new_keyinfo;
+    uint8_t new_key[KEY_LEN];
+    int nonce;
+    mup_keyinfo_t keyinfo;
+    uint8_t signature[SIGNATURE_LEN];
+} mup_key_manifest_u_t;
+
+typedef struct mup_inner_key_manifest_v_t {
+    char app_id[APP_ID_LEN];
+    int version;
+    mup_keyinfo_t new_keyinfo;
+    uint8_t new_key[KEY_LEN];
+    mup_keyinfo_t inner_keyinfo;
+} mup_inner_key_manifest_v_t;
+
+typedef struct mup_key_manifest_v_t {
+    char app_id[APP_ID_LEN];
+    int version;
+    mup_keyinfo_t new_keyinfo;
+    uint8_t new_key[KEY_LEN];
+    mup_keyinfo_t inner_keyinfo;
+    uint8_t inner_signature[SIGNATURE_LEN];
+    int nonce;
+    mup_keyinfo_t outer_keyinfo;
+    uint8_t outer_signature[SIGNATURE_LEN];
+} mup_key_manifest_v_t;
+
 typedef struct mup_image_slice_t {
     int num;
     int data_len;
@@ -98,6 +131,10 @@ int handle_cmd_gettoken(char* reqid_prefix);
 int handle_cmd_manifest(char* reqid_prefix, rpc_message_t* rpc);
 
 int handle_cmd_update(char* reqid_prefix, rpc_message_t* rpc);
+
+int handle_cmd_rollover_u(char* reqid_prefix, rpc_message_t* rpc);
+
+int handle_cmd_rollover_v(char* reqid_prefix, rpc_message_t* rpc);
 
 int handle_image_slice(mup_image_slice_t* slice);
 

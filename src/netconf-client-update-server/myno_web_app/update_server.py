@@ -111,6 +111,7 @@ def build_manifest_rpcs(thing, function, form_items):
   extendedManifest = extendedManifest.rstrip(';')
 
   # Add outer signature if necessary
+  # TODO Use Python instead of C binary
   if("input_11_OuterSignature" not in list(map(lambda i: i[0], form_items))):
     #hashString = hashlib.sha256(extendedManifest.encode()).hexdigest()
     out = subprocess.Popen(['./createSig', 'signU', extendedManifest], stdout=subprocess.PIPE)

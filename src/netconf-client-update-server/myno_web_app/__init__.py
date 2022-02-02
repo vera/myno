@@ -53,7 +53,7 @@ def create_app():
 		elif function == "funcPubUpdateManifest":
 			xml_rpcs = update_server.build_manifest_rpcs(thing, function, list(request.form.items()))
 		else:
-			xml_rpcs = netconf_client.build_xml_rpc(thing, function, param_type, param_name, value, request.form.items())
+			xml_rpcs = netconf_client.build_xml_rpc(thing, function, param_type, param_name, value, list(request.form.items()))
 		
 		# Send RPC(s) in new thread so we don't block the main thread
 		if isinstance(xml_rpcs, list):

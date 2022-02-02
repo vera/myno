@@ -1,0 +1,14 @@
+#!/bin/bash
+DEVICE_UUID="TEST-DEVICE-MUP"
+
+curl \
+-F input_01_AppId=APP \
+-F input_02_Version=2 \
+-F input_03_NewKeyInfo=feca07c0f9ffffff0200000001000000 \
+-F input_04_NewKey=c666bf9467484c4d6b19a7cee5c532d732670b4bbea4527b83617400df7bc8e74df0c6d506cba61d578d74f631dcad9e7eca9207b3580d1eed60640faaa32214 \
+-F input_05_InnerKeyInfo=fecafecaf9ffffff0200000001000000 \
+-F input_06_InnerSignature=ddebd613df040716f3a78019ae0f89cd937738ac93c322644fce9c026fe96d3ad29bf728e30c213ecc36ca3b172481cc54a80b1df0bdc463c1248edccbab17eb \
+-F input_07_DeviceNonce=1234567890 \
+-F input_08_OuterKeyInfo=efbeedfef9ffffff0200000001000000 \
+-F input_09_OuterSignature=6edf724a1d8544c4494ec00f9cea4aecd5c1c714c110b8db162dac42bf11cf6ee2678697457daa3335332b3366ba46cfa750a768573fb25856caa328bfa76e96 \
+http://localhost:5000/function_call/$DEVICE_UUID/funcPubUpdateKeyV

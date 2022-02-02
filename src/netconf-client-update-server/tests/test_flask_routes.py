@@ -176,3 +176,26 @@ def test_manifest_post_for_mup_board(client, with_mup_setup):
     expected_xml_rpc += '<' + input + '>' + form_data[input] + '</' + input + '>'
   expected_xml_rpc += '</' + func_name + '>'
   assert xml_rpc == expected_xml_rpc
+
+def test_key_rollover_post_for_mup_board(client, with_mup_setup):
+  """
+  Check that POST request for key rollover results in the correct XML RPC being dispatched
+  """
+  func_name = 'funcPubUpdateKeyU'
+  form_data = { 'input_1_AppId': 'APP',
+                'input_2_Version': '2',
+                'input_03_NewKeyInfo': 'efbeedfef9ffffff0200000001000000',
+                'input_04_NewKey': 'c3b993f64651add0f13cdd98824f04aca351b8349a25194f8b2e1b59ad9a163d2b8732c822c533c7c2ca19d6192062ef9598cbd6759bd58f77ac2fae8970fc6f',
+                'input_05_DeviceNonce': '1234567890',
+                'input_06_KeyInfo': 'efbeaddef9ffffff0200000001000000',
+                'input_07_Signature': '50c80cc699c782977b067f4825533fd3d6a7b6e00fa1728147945ac64b050b1141eb5f2e153926599fd78e3514b7b8b34662804ed096d14ad5e3b84e9af1319e' }
+
+  client.post('/function_call/' + device_id + '/' + func_name, data=form_data)
+
+  mock_nc_manager.dispatch.assert_called_once()
+  xml_rpc = tostring(mock_nc_manager.dispatch.call_args.args[0]).decode("utf-8")
+  expected_xml_rpc = '<' + func_name + '>' + '<uuidInput>' + device_id + '</uuidInput>'
+  for input in form_data:
+    expected_xml_rpc += '<' + input + '>' + form_data[input] + '</' + input + '>'
+  expected_xml_rpc += '</' + func_name + '>'
+  assert xml_rpc == expected_xml_rpc

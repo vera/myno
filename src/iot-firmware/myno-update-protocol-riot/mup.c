@@ -128,6 +128,18 @@ int handle_cmd_manifest(char* reqid_prefix, rpc_message_t* rpc)
     }
     printf("\n");
 
+    if(_check_signature(public_manufacturer, manifest.inner_keyinfo, (mup_inner_manifest_t*)&manifest, sizeof(mup_inner_manifest_t), manifest.inner_signature, SIGNATURE_LEN) < 0) {
+        printf("mup: Inner signature invalid\n");
+        return _send_rpc_error_response(reqid_prefix);
+    }
+
+    if(_check_signature(public_updateserver, manifest.outer_keyinfo, (mup_outer_manifest_t*)&manifest, sizeof(mup_outer_manifest_t), manifest.outer_signature, SIGNATURE_LEN) < 0) {
+        printf("mup: Outer signature invalid\n");
+        return _send_rpc_error_response(reqid_prefix);
+    }
+
+    printf("mup: Signature checks successful\n");
+
     expected_slice = 0;
     /* Subscribe to update slice topic */
     myno_device_pid = thread_getpid();
@@ -158,19 +170,114 @@ int handle_cmd_update(char* reqid_prefix, rpc_message_t* rpc)
         return _send_rpc_error_response(reqid_prefix);
     }
 
-    if(_check_signature(public_manufacturer, manifest.inner_keyinfo, (mup_inner_manifest_t*)&manifest, sizeof(mup_inner_manifest_t), manifest.inner_signature, SIGNATURE_LEN) < 0) {
-        printf("mup: Inner signature invalid\n");
-        return _send_rpc_error_response(reqid_prefix);
-    }
-
-    if(_check_signature(public_updateserver, manifest.outer_keyinfo, (mup_outer_manifest_t*)&manifest, sizeof(mup_outer_manifest_t), manifest.outer_signature, SIGNATURE_LEN) < 0) {
-        printf("mup: Outer signature invalid\n");
-        return _send_rpc_error_response(reqid_prefix);
-    }
-
     printf("mup: Update checks successful\n");
 
     // TODO Install + reboot
+
+    return myno_mqtt_publish(CMD_RESPONSE_OK, strlen(CMD_RESPONSE_OK),
+                             reqid_prefix, strlen(reqid_prefix),
+                             TOPIC_RESPONSE, QOS0, BLOCK_SIZE);
+}
+
+int handle_cmd_rollover_u(char* reqid_prefix, rpc_message_t* rpc)
+{
+    if(rpc->num_params != 7) {
+        printf("mup: Received key manifest with wrong number of fields (%d)\n", rpc->num_params);
+        return _send_rpc_error_response(reqid_prefix);
+    }
+
+    mup_key_manifest_u_t key_manifest;
+    strncpy(key_manifest.app_id, (char*)rpc->params[0], APP_ID_LEN);
+    key_manifest.version = atoi((char*)rpc->params[1]);
+    memcpy(&key_manifest.new_keyinfo, rpc->params[2], sizeof(mup_keyinfo_t));
+    memcpy(&key_manifest.new_key, rpc->params[3], KEY_LEN);
+    key_manifest.nonce = atoi((char*)rpc->params[4]);
+    memcpy(&key_manifest.keyinfo, rpc->params[5], sizeof(mup_keyinfo_t));
+    memcpy(key_manifest.signature, rpc->params[6], SIGNATURE_LEN);
+
+    printf("mup: Received key manifest\n");
+    printf("mup: - App ID: %s\n", key_manifest.app_id);
+    printf("mup: - Version: %d\n", key_manifest.version);
+    printf("mup: - New key info: Key ID: 0x%04X, Algorithm: %d, Key Type: %d, Curve: %d\n", key_manifest.new_keyinfo.kid, key_manifest.new_keyinfo.alg, key_manifest.new_keyinfo.kty, key_manifest.new_keyinfo.crv);
+    printf("mup: - New key: ");
+    for (size_t i = 0; i < KEY_LEN; i++) {
+        printf("%02x", key_manifest.new_key[i]);
+    }
+    printf("\n");
+    printf("mup: - Nonce: %d\n", key_manifest.nonce);
+    printf("mup: - Key info: Key ID: 0x%04X, Algorithm: %d, Key Type: %d, Curve: %d\n", key_manifest.keyinfo.kid, key_manifest.keyinfo.alg, key_manifest.keyinfo.kty, key_manifest.keyinfo.crv);
+    printf("mup: - Signature: ");
+    for (size_t i = 0; i < SIGNATURE_LEN; i++) {
+        printf("%02x", key_manifest.signature[i]);
+    }
+    printf("\n");
+
+    if(_check_signature(public_updateserver, key_manifest.keyinfo, &key_manifest, sizeof(mup_key_manifest_u_t)-SIGNATURE_LEN, key_manifest.signature, SIGNATURE_LEN) < 0) {
+        printf("mup: Update server key rollover signature invalid\n");
+        return _send_rpc_error_response(reqid_prefix);
+    }
+
+    memcpy(public_updateserver, key_manifest.new_key, KEY_LEN);
+    printf("mup: Successfully stored new update server key\n");
+
+    return myno_mqtt_publish(CMD_RESPONSE_OK, strlen(CMD_RESPONSE_OK),
+                             reqid_prefix, strlen(reqid_prefix),
+                             TOPIC_RESPONSE, QOS0, BLOCK_SIZE);
+}
+
+int handle_cmd_rollover_v(char* reqid_prefix, rpc_message_t* rpc)
+{
+    if(rpc->num_params != 9) {
+        printf("mup: Received key manifest with wrong number of fields (%d)\n", rpc->num_params);
+        return _send_rpc_error_response(reqid_prefix);
+    }
+
+    mup_key_manifest_v_t key_manifest;
+    strncpy(key_manifest.app_id, (char*)rpc->params[0], APP_ID_LEN);
+    key_manifest.version = atoi((char*)rpc->params[1]);
+    memcpy(&key_manifest.new_keyinfo, rpc->params[2], sizeof(mup_keyinfo_t));
+    memcpy(&key_manifest.new_key, rpc->params[3], KEY_LEN);
+    memcpy(&key_manifest.inner_keyinfo, rpc->params[4], sizeof(mup_keyinfo_t));
+    memcpy(key_manifest.inner_signature, rpc->params[5], SIGNATURE_LEN);
+    key_manifest.nonce = atoi((char*)rpc->params[6]);
+    memcpy(&key_manifest.outer_keyinfo, rpc->params[7], sizeof(mup_keyinfo_t));
+    memcpy(key_manifest.outer_signature, rpc->params[8], SIGNATURE_LEN);
+
+    printf("mup: Received key manifest\n");
+    printf("mup: - App ID: %s\n", key_manifest.app_id);
+    printf("mup: - Version: %d\n", key_manifest.version);
+    printf("mup: - New key info: Key ID: 0x%04X, Algorithm: %d, Key Type: %d, Curve: %d\n", key_manifest.new_keyinfo.kid, key_manifest.new_keyinfo.alg, key_manifest.new_keyinfo.kty, key_manifest.new_keyinfo.crv);
+    printf("mup: - New key: ");
+    for (size_t i = 0; i < KEY_LEN; i++) {
+        printf("%02x", key_manifest.new_key[i]);
+    }
+    printf("\n");
+    printf("mup: - Inner key info: Key ID: 0x%04X, Algorithm: %d, Key Type: %d, Curve: %d\n", key_manifest.inner_keyinfo.kid, key_manifest.inner_keyinfo.alg, key_manifest.inner_keyinfo.kty, key_manifest.inner_keyinfo.crv);
+    printf("mup: - Inner signature: ");
+    for (size_t i = 0; i < SIGNATURE_LEN; i++) {
+        printf("%02x", key_manifest.inner_signature[i]);
+    }
+    printf("\n");
+    printf("mup: - Nonce: %d\n", key_manifest.nonce);
+    printf("mup: - Outer key info: Key ID: 0x%04X, Algorithm: %d, Key Type: %d, Curve: %d\n", key_manifest.outer_keyinfo.kid, key_manifest.outer_keyinfo.alg, key_manifest.outer_keyinfo.kty, key_manifest.outer_keyinfo.crv);
+    printf("mup: - Outer signature: ");
+    for (size_t i = 0; i < SIGNATURE_LEN; i++) {
+        printf("%02x", key_manifest.outer_signature[i]);
+    }
+    printf("\n");
+
+    if(_check_signature(public_manufacturer, key_manifest.inner_keyinfo, (mup_inner_key_manifest_v_t*)&key_manifest, sizeof(mup_inner_key_manifest_v_t), key_manifest.inner_signature, SIGNATURE_LEN) < 0) {
+        printf("mup: Inner vendor key rollover signature invalid\n");
+        return _send_rpc_error_response(reqid_prefix);
+    }
+
+    if(_check_signature(public_updateserver, key_manifest.outer_keyinfo, &key_manifest, sizeof(mup_key_manifest_v_t)-SIGNATURE_LEN, key_manifest.outer_signature, SIGNATURE_LEN) < 0) {
+        printf("mup: Outer vendor key rollover signature invalid\n");
+        return _send_rpc_error_response(reqid_prefix);
+    }
+
+    memcpy(public_manufacturer, key_manifest.new_key, KEY_LEN);
+    printf("mup: Successfully stored new vendor key\n");
 
     return myno_mqtt_publish(CMD_RESPONSE_OK, strlen(CMD_RESPONSE_OK),
                              reqid_prefix, strlen(reqid_prefix),
