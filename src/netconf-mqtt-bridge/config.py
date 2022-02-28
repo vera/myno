@@ -15,6 +15,7 @@ TOPIC_CREATE = ["yang/config/create", "yang/config"]
 TOPIC_SUFFIX_RESPONSE = "/response/"
 SECS_TO_WAIT_FOR_RESPONSE = 120
 SECS_SINGLE_WAIT = 0.2
+SEND_AS_CBOR=False # CAUTION This is turned off by default because it has not been tested extensively.
 
 """
 NETCONF config

@@ -27,6 +27,7 @@ import time
 from netconf import server as netconf_server
 from ncclient.xml_ import sub_ele
 from lxml import etree
+import cbor2
 
 import config
 from myno_device import MynoDevice
@@ -185,25 +186,41 @@ class NetconfMqttBridge:
 				responses.append("MISSING PARAMS: %s" % ", ".join(list(missing_params)))
 			response = ", ".join(responses)
 		else:
-			parameter_str = ""
-			for param in parameters:
-				if param["tag"] == "uuidInput":
-					uuid = param["text"]
-				else:
-					input = next(i for i in rpc["inputs"] if i["name"] == param["tag"])
-					if input["datatype"] == "hexBinary":
-						try:
-							parameter_str = bytes(parameter_str, "utf-8") + bytes.fromhex(param["text"]) + b","
-						except TypeError:
-							# Parameter string already contains binary param
-							parameter_str += bytes.fromhex(param["text"]) + bytes(",", "utf-8")
+			if not config.SEND_AS_CBOR:
+				parameter_str = ""
+				for param in parameters:
+					if param["tag"] == "uuidInput":
+						uuid = param["text"]
 					else:
-						try:
-							parameter_str += param["text"] + ","
-						except TypeError:
-							# Parameter string already contains binary param
-							parameter_str += bytes(param["text"] + ",", "utf-8")
-			parameter_str = parameter_str[:-1] # remove trailing comma
+						input = next(i for i in rpc["inputs"] if i["name"] == param["tag"])
+						if input["datatype"] == "hexBinary":
+							try:
+								parameter_str = bytes(parameter_str, "utf-8") + bytes.fromhex(param["text"]) + b","
+							except TypeError:
+								# Parameter string already contains binary param
+								parameter_str += bytes.fromhex(param["text"]) + bytes(",", "utf-8")
+						else:
+							try:
+								parameter_str += param["text"] + ","
+							except TypeError:
+								# Parameter string already contains binary param
+								parameter_str += bytes(param["text"] + ",", "utf-8")
+				parameter_str = parameter_str[:-1] # remove trailing comma
+			else:
+				parameter_list = []
+				for param in parameters:
+					if param["tag"] == "uuidInput":
+						uuid = param["text"]
+					else:
+						input = next(i for i in rpc["inputs"] if i["name"] == param["tag"])
+						if input["datatype"] == "hexBinary":
+							parameter_list.append(bytes.fromhex(param["text"]))
+						elif input["datatype"] == "int":
+							parameter_list.append(int(param["text"]))
+						else:
+							parameter_list.append(param["text"])
+
+				parameter_str = cbor2.dumps(parameter_list)
 
 			try:
 				msg = str(req_id) + ";" + rpc["mqttMethod"]
@@ -238,6 +255,9 @@ class NetconfMqttBridge:
 	def delete_device(self, uuid):
 		# TODO Implement
 		pass
+
+	def _toggle_cbor(self):
+		config.SEND_AS_CBOR = not config.SEND_AS_CBOR
 
 
 def main():

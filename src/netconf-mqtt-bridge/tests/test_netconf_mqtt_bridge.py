@@ -3,6 +3,7 @@ import pytest
 from netconf import client
 from importlib import reload
 from lxml.etree import tostring
+import cbor2
 
 import config
 import netconf_mqtt_bridge
@@ -166,6 +167,58 @@ def test_rpc_multiple_params(session, netconf_methods, mqtt_client):
 				# If message already includes binary params
 				expected_message += bytes(str(params[key]) + ",", "utf-8")
 	expected_message = expected_message[:-1]
+	assert mqtt_client.publish.call_args.args == ("yang/update/manifest", expected_message)
+
+def test_rpc_multiple_params_cbor(session, netconf_methods, mqtt_client):
+	bridge._toggle_cbor()
+	params = {
+		"app_id": "TestApp",
+		"offset": 8000,
+		"image_hash_binary": "abcdef",
+		"image_size": 500,
+		"version": 2,
+		"old_version": 1,
+		"inner_key_info_binary": "fecafecaf9ffffff",
+		"inner_signature_binary": "abcdef",
+		"nonce": 123456,
+		"outer_key_info_binary": "efbeaddef9ffffff",
+		"outer_signature_binary": "abcdef"
+	}
+	params_list = ["app_id", "offset", "image_hash_binary", "image_size", "version", "old_version", "inner_key_info_binary", "inner_signature_binary", "nonce", "outer_key_info_binary", "outer_signature_binary"]
+	req_id = 0
+	response = "OK!"
+	bridge.current_req_id = req_id
+	bridge.responses[str(req_id)] = response
+
+	rpc_params = (uuids["mup"],) + tuple(map(lambda key: params[key], params_list))
+	_, _, res = session.send_rpc(
+"""<funcPubUpdateManifest>
+  <uuidInput>%s</uuidInput>
+  <input_01_AppId>%s</input_01_AppId>
+  <input_02_LinkOffset>%d</input_02_LinkOffset>
+  <input_03_Hash>%s</input_03_Hash>
+  <input_04_Size>%d</input_04_Size>
+  <input_05_Version>%d</input_05_Version>
+  <input_06_OldVersion>%d</input_06_OldVersion>
+  <input_07_InnerKeyInfo>%s</input_07_InnerKeyInfo>
+  <input_08_InnerSignature>%s</input_08_InnerSignature>
+  <input_09_DeviceNonce>%d</input_09_DeviceNonce>
+  <input_10_OuterKeyInfo>%s</input_10_OuterKeyInfo>
+  <input_11_OuterSignature>%s</input_11_OuterSignature>
+</funcPubUpdateManifest>
+""" % rpc_params)
+	bridge._toggle_cbor()
+
+	assert res == (
+"""<?xml version="1.0" encoding="UTF-8"?><rpc-reply xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" message-id="%d">
+  <data>
+    <retval>%s</retval>
+  </data>
+</rpc-reply>
+""" % (req_id, response))
+	mqtt_client.publish.assert_called_once()
+	expected_message = str(req_id) + ";PUB-UPDATE-MANIFEST;"
+	expected_message  = bytes(expected_message, "utf-8") + cbor2.dumps(list(map(lambda key: bytes.fromhex(params[key]) if "_binary" in key else params[key], params_list)))
 	assert mqtt_client.publish.call_args.args == ("yang/update/manifest", expected_message)
 
 def test_rpc_no_response(session, netconf_methods, mqtt_client):
