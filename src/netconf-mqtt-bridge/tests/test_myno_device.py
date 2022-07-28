@@ -1,4 +1,23 @@
+import pytest
+
 import myno_device as md
+from myno_device_description_errors import *
+
+def test_no_device():
+	with pytest.raises(NotASingleDeviceError, match="contains 0 devices"):
+		device = md.MynoDevice("{}")
+
+def test_multiple_devices():
+	with pytest.raises(NotASingleDeviceError, match="contains 2 devices"):
+		device = md.MynoDevice('[{"@context":{"onem2m": "http://www.onem2m.org/ontology/Base_Ontology/base_ontology#"},"@id":"base:myDevice","@type":"onem2m:Device"},{"@context":{"onem2m": "http://www.onem2m.org/ontology/Base_Ontology/base_ontology#"},"@id":"base:myDevice2","@type":"onem2m:Device"}]')
+
+def test_missing_device_uuid():
+	with pytest.raises(MissingDeviceUuidOrCategoryError):
+		device = md.MynoDevice('{"@context":{"onem2m": "http://www.onem2m.org/ontology/Base_Ontology/base_ontology#"},"@id":"base:myDevice","@type":"onem2m:Device","onem2m:hasThingProperty":[{"@id":"base:deviceCategory","@type":"onem2m:ThingProperty","onem2m:hasValue":"TestDevices"}]}')
+
+def test_missing_device_category():
+	with pytest.raises(MissingDeviceUuidOrCategoryError):
+		device = md.MynoDevice('{"@context":{"onem2m": "http://www.onem2m.org/ontology/Base_Ontology/base_ontology#"},"@id":"base:myDevice","@type":"onem2m:Device","onem2m:hasThingProperty":[{"@id":"base:deviceUuid","@type":"onem2m:ThingProperty","onem2m:hasValue":"MY-DEVICE"}]}')
 
 def test_MUP():
 	with open("tests/assets/ontology_mup.jsonld") as ontology:

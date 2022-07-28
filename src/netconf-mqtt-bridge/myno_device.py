@@ -24,17 +24,19 @@ import pyang.plugin
 
 from pyang.statements import Statement
 from rdflib import Graph
+from rdflib.namespace import RDF
 from io import StringIO
 from optparse import OptionParser
 
 import config
+from myno_device_description_errors import *
 
 
 # Define short prefixes to be used in SPARQL queries
-initNs = {
+NAMESPACES = {
 	"base": config.BASE_IRI,
 	"onem2m": "http://www.onem2m.org/ontology/Base_Ontology/base_ontology#",
-	"rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+	"rdf": RDF,
 	"om-2": "http://www.ontology-of-units-of-measure.org/resource/om-2/"
 }
 
@@ -49,56 +51,52 @@ class MynoDevice:
 		self.telemetry_functions = []
 
 		g = Graph()
-		g.parse(data=dd, format="json-ld", base=config.BASE_IRI)
+		for ns in NAMESPACES:
+			g.bind(ns, NAMESPACES[ns])
+		g.parse(data=dd, format="json-ld")
 
 		# Check number of devices described
-		result = g.query(
-			"SELECT *"
-			"WHERE {"
-			" ?device rdf:type onem2m:Device ."
-			" }",
-			initNs=initNs)
-		if len(result) != 1:
-			raise ValueError("Device description contains multiple devices or no device.")
+		result = g.query("SELECT * WHERE { ?device a onem2m:Device . }")
+		num_devices = len(result)
+		if num_devices != 1:
+			raise NotASingleDeviceError("Device description contains %d devices; expected 1 device." % (num_devices))
+		device_uri = result.bindings[0]["device"]
 
 		# Get device UUID and category
-		result = g.query(
-			"SELECT *"
-			"WHERE {"
-			" ?device rdf:type onem2m:Device ."
-			" ?device onem2m:hasThingProperty ?property ."
-			" ?property onem2m:hasValue ?value ."
-			" }",
-			initNs=initNs)
-		for row in result:
-			if (str(row["property"]) == config.BASE_IRI + "deviceUuid"):
-				self.uuid = str(row["value"])
-			elif (str(row["property"]) == config.BASE_IRI + "deviceCategory"):
-				self.category = str(row["value"])
-			elif (str(row["property"]) == config.BASE_IRI + "deviceDesc"):
-				self.description = str(row["value"])
-		if not self.uuid or not self.category:
-			raise ValueError("UUID or device category not found.")
+		result = g.query("""
+SELECT ?deviceUuid ?deviceCategory ?deviceDesc
+WHERE {
+	?device onem2m:hasThingProperty base:deviceUuid . base:deviceUuid onem2m:hasValue ?deviceUuid.
+	?device onem2m:hasThingProperty base:deviceCategory . base:deviceCategory onem2m:hasValue ?deviceCategory.
+	OPTIONAL { ?device onem2m:hasThingProperty base:deviceDesc . base:deviceDesc onem2m:hasValue ?deviceDesc. }
+}
+		""", initBindings={ "device": device_uri })
+		if not len(result):
+			raise MissingDeviceUuidOrCategoryError()
+		self.uuid = str(result.bindings[0]["deviceUuid"])
+		self.category = str(result.bindings[0]["deviceCategory"])
+		if "deviceDesc" in result.bindings[0]:
+			self.description = str(result.bindings[0]["deviceDesc"])
 
 		# Get RPCs (functions with operations and commands)
-		result = g.query(
-			"SELECT *"
-			"WHERE {"
-			" ?device rdf:type onem2m:Device ."
-			" ?device onem2m:hasFunctionality ?function ."
-			" ?service onem2m:hasOperation ?operation ."
-			" ?service onem2m:exposesFunctionality ?function."
-			" ?function onem2m:hasCommand ?command."
-			" ?operation onem2m:exposesCommand ?command."
-			" ?operation base:mqttTopic ?topic."
-			" ?operation base:mqttMethod ?method."
-			" ?function onem2m:hasThingProperty ?property."
-			" ?property rdf:type base:YangDescription."
-			" ?property onem2m:hasValue ?description."
-			" }"
-			" ORDER BY ?function",
-			initNs=initNs)
+		result = g.query("""
+SELECT ?function ?description ?topic ?method ?operation
+WHERE {
+	?device onem2m:hasFunctionality ?function ;
+		onem2m:hasService/onem2m:hasSubService*/onem2m:exposesFunctionality ?function ;
+		onem2m:hasService/onem2m:hasSubService*/onem2m:hasOperation ?operation .
+	?function onem2m:hasCommand ?command ;
+		onem2m:hasThingProperty ?property .
+	?property rdf:type base:YangDescription ;
+		onem2m:hasValue ?description.
+	?operation onem2m:exposesCommand ?command ;
+		base:mqttTopic ?topic ;
+		base:mqttMethod ?method.
+}
+ORDER BY ?function
+		""", initBindings={ "device": device_uri })
 		for row in result:
+			operation = row["operation"]
 			rpc = {
 				"name": row["function"].split("#")[1],
 				"description": str(row["description"]),
@@ -107,22 +105,27 @@ class MynoDevice:
 				"inputs": [],
 				"returnStates": []
 			}
-			op = row["operation"].split("#")[1]
 			# Get function inputs
-			result = g.query(
-				"""SELECT *
+			result = g.query("""
+SELECT ?input ?description ?min ?max ?type
 WHERE {
-	base:%s onem2m:hasInput ?input.
+	?operation onem2m:hasInput ?input.
 	?input onem2m:hasThingProperty ?property.
-	?property rdf:type base:YangDescription.
-	?property onem2m:hasValue ?description.
-	OPTIONAL { ?input onem2m:hasInput ?input2. ?input2 onem2m:hasDataType ?type. OPTIONAL { ?input2 onem2m:hasDataRestriction_minInclusive ?min. ?input2 onem2m:hasDataRestriction_maxInclusive ?max. } }
-} ORDER BY ?input""" % op,
-				initNs=initNs)
+	?property rdf:type base:YangDescription;
+		onem2m:hasValue ?description.
+	OPTIONAL {
+		?input onem2m:hasInput ?input2.
+		?input2 onem2m:hasDataType ?type.
+		OPTIONAL {
+			?input2 onem2m:hasDataRestriction_minInclusive ?min ;
+				onem2m:hasDataRestriction_maxInclusive ?max.
+		}
+	}
+} ORDER BY ?input
+			""", initBindings={ "operation": operation })
 			for row in result:
-				inputName = row["input"].split("#")[1]
 				i = {
-					"name": inputName,
+					"name": row["input"].split("#")[1],
 					"description": str(row["description"]),
 					"datatype": "string" # default
 				}
@@ -131,25 +134,24 @@ WHERE {
 				if row["type"]:
 					i["datatype"] = row["type"].split("#")[1]
 				else:
-					result = g.query(
-						"""SELECT *
+					result = g.query("""
+SELECT ?pattern
 WHERE {
-	base:%s onem2m:hasDataRestriction_pattern ?pattern.
-} ORDER BY ?pattern""" % inputName,
-						initNs=initNs)
+	?input onem2m:hasDataRestriction_pattern ?pattern.
+} ORDER BY ?pattern
+					""", initBindings={ "input": row["input"] })
 					if len(result) > 0:
 						i["datatype"] = []
 					for row in result:
 						i["datatype"].append(str(row["pattern"]))
 				rpc["inputs"].append(i)
 			# Get possible return states
-			result = g.query(
-				"""SELECT *
+			result = g.query("""
+SELECT ?pattern
 WHERE {
-	base:%s onem2m:hasOperationState ?state.
-	?state onem2m:hasDataRestriction_pattern ?pattern.
-} ORDER BY ?pattern""" % op,
-				initNs=initNs)
+	?operation onem2m:hasOperationState/onem2m:hasDataRestriction_pattern ?pattern.
+} ORDER BY ?pattern
+			""", initBindings={ "operation": operation })
 			for row in result:
 				returnState = {
 					"name": str(row["pattern"])
@@ -158,33 +160,31 @@ WHERE {
 			# Get return states' descriptions
 			# (unfortunately they are not connected with the states themselves by any triple,
 			# so they must be queried separately and matched using the alphanumeric order.)
-			result = g.query(
-				"""SELECT *
+			result = g.query("""
+SELECT ?pattern
 WHERE {
-	base:%s onem2m:hasOperationState ?state.
-	?state onem2m:hasThingProperty ?property.
-	?property rdf:type base:YangDescription.
-	?property onem2m:hasDataRestriction_pattern ?pattern.
-} ORDER BY ?pattern""" % op,
-				initNs=initNs)
+	?operation onem2m:hasOperationState/onem2m:hasThingProperty ?property .
+	?property rdf:type base:YangDescription ;
+		onem2m:hasDataRestriction_pattern ?pattern .
+} ORDER BY ?pattern
+			""", initBindings={ "operation": operation })
 			for i, row in enumerate(result):
 				rpc["returnStates"][i]["description"] = str(row["pattern"])
 			self.rpcs.append(rpc)
 
 		# Get telemetry functions (without operations and commands)
-		result = g.query(
-			"SELECT *"
-			"WHERE {"
-			" ?device rdf:type onem2m:Device ."
-			" ?device onem2m:hasFunctionality ?function ."
-			" ?function onem2m:hasThingProperty ?property."
-			" ?property rdf:type base:YangDescription."
-			" ?property onem2m:hasValue ?description."
-			" OPTIONAL { ?function onem2m:hasCommand ?command. }"
-			" FILTER(!bound(?command))"
-			" }"
-			" ORDER BY ?function",
-			initNs=initNs)
+		result = g.query("""
+SELECT ?function ?description
+WHERE {
+	?device onem2m:hasFunctionality ?function .
+	?function onem2m:hasThingProperty ?property .
+	?property rdf:type base:YangDescription ;
+		onem2m:hasValue ?description .
+	OPTIONAL { ?function onem2m:hasCommand ?command . }
+	FILTER(!bound(?command))
+}
+ORDER BY ?function
+		""", initBindings={ "device": device_uri })
 		for row in result:
 			telemetry_function = {
 				"name": row["function"].split("#")[1],
@@ -192,15 +192,15 @@ WHERE {
 				"outputs": []
 			}
 
-			result = g.query(
-				"""SELECT *
+			result = g.query("""
+SELECT ?dp ?topic ?unit ?usymbol
 WHERE {
-	?service onem2m:exposesFunctionality base:%s.
-	?service onem2m:hasOutputDataPoint ?dp.
-	?dp base:mqttTopic ?topic.
-	OPTIONAL { ?dp om-2:hasUnit ?unit. ?unit om-2:symbol ?usymbol. }
-} ORDER BY ?dp""" % telemetry_function["name"],
-				initNs=initNs)
+	?service onem2m:exposesFunctionality ?function ;
+		onem2m:hasOutputDataPoint ?dp .
+	?dp base:mqttTopic ?topic .
+	OPTIONAL { ?dp om-2:hasUnit ?unit. ?unit om-2:symbol ?usymbol . }
+} ORDER BY ?dp
+		""", initBindings={ "function": row["function"] })
 			for row in result:
 				output = {
 					"name": row["dp"].split("#")[1],
